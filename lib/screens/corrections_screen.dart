@@ -116,7 +116,7 @@ class _CorrectionsScreenState extends State<CorrectionsScreen> {
                     const Text('Jenis Koreksi', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
-                      value: selectedType,
+                      initialValue: selectedType,
                       items: correctionTypes.map((type) {
                         return DropdownMenuItem(value: type, child: Text(type, style: const TextStyle(fontSize: 13)));
                       }).toList(),
@@ -159,21 +159,21 @@ class _CorrectionsScreenState extends State<CorrectionsScreen> {
                                 ? null
                                 : () async {
                                     if (!formKey.currentState!.validate()) return;
+                                    final nav = Navigator.of(context);
+                                    final messenger = ScaffoldMessenger.of(context);
                                     final result = await provider.submitCorrection(
                                       date: DateFormat('yyyy-MM-dd').format(selectedDate),
                                       type: selectedType,
                                       reason: reasonController.text.trim(),
                                     );
 
-                                    if (mounted) {
-                                      Navigator.pop(context);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(result['message']),
-                                          backgroundColor: result['success'] ? AppColors.brand600 : AppColors.statusAlpha,
-                                        ),
-                                      );
-                                    }
+                                    nav.pop();
+                                    messenger.showSnackBar(
+                                      SnackBar(
+                                        content: Text(result['message']),
+                                        backgroundColor: result['success'] ? AppColors.brand600 : AppColors.statusAlpha,
+                                      ),
+                                    );
                                   },
                             child: provider.isSubmitting
                                 ? const SizedBox(

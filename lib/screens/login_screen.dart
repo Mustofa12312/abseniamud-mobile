@@ -111,6 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
+                final nav = Navigator.of(context);
                 final newUrl = controller.text.trim();
                 if (newUrl.isNotEmpty) {
                   await SecureStorageService().saveBaseUrl(newUrl);
@@ -118,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     _currentBaseUrl = newUrl;
                   });
                 }
-                if (mounted) Navigator.pop(context);
+                nav.pop();
               },
               child: const Text('Simpan'),
             ),
