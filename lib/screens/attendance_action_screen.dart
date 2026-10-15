@@ -332,11 +332,20 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
               const SizedBox(height: 16),
             ],
 
-            // Mock Location Warning Box
+            // Mock Location / GPS Error Warning Box
             MockLocationWarning(
               isMockDetected: isMock,
               reason: devProvider.mockReason,
+              errorMessage: (locResult != null && !locResult.isSuccess && !isMock) ? locResult.errorMessage : null,
               onRefresh: _scanGps,
+              onOpenSettings: () async {
+                final isPerm = (locResult?.errorMessage ?? '').toLowerCase().contains('izin');
+                if (isPerm) {
+                  await devProvider.openAppSettings();
+                } else {
+                  await devProvider.openLocationSettings();
+                }
+              },
             ),
             const SizedBox(height: 12),
 

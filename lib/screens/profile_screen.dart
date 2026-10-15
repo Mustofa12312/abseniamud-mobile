@@ -7,6 +7,8 @@ import '../providers/auth_provider.dart';
 import '../providers/device_security_provider.dart';
 import '../widgets/device_info_card.dart';
 import 'login_screen.dart';
+import 'leaves_screen.dart';
+import 'corrections_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -44,6 +46,165 @@ class ProfileScreen extends StatelessWidget {
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.statusAlpha),
               child: const Text('Ya, Logout'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showChangePasswordDialog(BuildContext context) {
+    final formKey = GlobalKey<FormState>();
+    final currentPassController = TextEditingController();
+    final newPassController = TextEditingController();
+    final confirmPassController = TextEditingController();
+    bool obscureCurrent = true;
+    bool obscureNew = true;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text(
+                'Ubah Kata Sandi',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: currentPassController,
+                      obscureText: obscureCurrent,
+                      decoration: InputDecoration(
+                        labelText: 'Kata Sandi Saat Ini',
+                        suffixIcon: IconButton(
+                          icon: Icon(obscureCurrent ? Icons.visibility_off : Icons.visibility),
+                          onPressed: () => setDialogState(() => obscureCurrent = !obscureCurrent),
+                        ),
+                      ),
+                      validator: (val) {
+                        if (val == null || val.length < 6) return 'Minimal 6 karakter';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: newPassController,
+                      obscureText: obscureNew,
+                      decoration: InputDecoration(
+                        labelText: 'Kata Sandi Baru',
+                        suffixIcon: IconButton(
+                          icon: Icon(obscureNew ? Icons.visibility_off : Icons.visibility),
+                          onPressed: () => setDialogState(() => obscureNew = !obscureNew),
+                        ),
+                      ),
+                      validator: (val) {
+                        if (val == null || val.length < 6) return 'Minimal 6 karakter';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: confirmPassController,
+                      obscureText: obscureNew,
+                      decoration: const InputDecoration(
+                        labelText: 'Konfirmasi Kata Sandi Baru',
+                      ),
+                      validator: (val) {
+                        if (val != newPassController.text) return 'Konfirmasi kata sandi tidak cocok';
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogCtx),
+                  child: const Text('Batal'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (!formKey.currentState!.validate()) return;
+                    final auth = Provider.of<AuthProvider>(context, listen: false);
+                    final nav = Navigator.of(dialogCtx);
+                    final messenger = ScaffoldMessenger.of(context);
+
+                    final result = await auth.changePassword(
+                      currentPassword: currentPassController.text,
+                      newPassword: newPassController.text,
+                    );
+
+                    nav.pop();
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(result['message']),
+                        backgroundColor: result['success'] ? AppColors.brand600 : AppColors.statusAlpha,
+                      ),
+                    );
+                  },
+                  child: const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showEditContactDialog(BuildContext context, String? currentPhone) {
+    final phoneController = TextEditingController(text: currentPhone ?? '');
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Perbarui Kontak', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Nomor HP / WhatsApp:', style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  hintText: '081234567890',
+                  prefixIcon: Icon(Icons.phone_rounded),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final auth = Provider.of<AuthProvider>(context, listen: false);
+                final nav = Navigator.of(dialogCtx);
+                final messenger = ScaffoldMessenger.of(context);
+
+                final result = await auth.updateContact(phone: phoneController.text.trim());
+
+                nav.pop();
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(result['message']),
+                    backgroundColor: result['success'] ? AppColors.brand600 : AppColors.statusAlpha,
+                  ),
+                );
+              },
+              child: const Text('Simpan'),
             ),
           ],
         );
@@ -157,9 +318,68 @@ class ProfileScreen extends StatelessWidget {
                       _buildProfileRow('NIDN', user.lecturer!.nidn!),
                     if (user.lecturer!.nip != null)
                       _buildProfileRow('NIP', user.lecturer!.nip!),
-                    if (user.lecturer!.phone != null)
-                      _buildProfileRow('No. HP / WhatsApp', user.lecturer!.phone!),
+                    _buildProfileRow(
+                      'No. HP / WA',
+                      user.lecturer!.phone ?? 'Belum diatur',
+                      action: InkWell(
+                        onTap: () => _showEditContactDialog(context, user.lecturer?.phone),
+                        child: const Padding(
+                          padding: EdgeInsets.only(left: 6),
+                          child: Icon(Icons.edit_outlined, size: 16, color: AppColors.brand600),
+                        ),
+                      ),
+                    ),
                   ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // LAYANAN AKADEMIK & PRESENSI MENU CARD
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.borderLight),
+              ),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFFF0FDF4),
+                      child: Icon(Icons.assignment_turned_in_rounded, color: AppColors.brand700, size: 20),
+                    ),
+                    title: const Text('Pengajuan Izin, Sakit & Cuti', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Ajukan permohonan tidak hadir resmi', style: TextStyle(fontSize: 11.5, color: AppColors.textSecondaryLight)),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const LeavesScreen()));
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFFFEF3C7),
+                      child: Icon(Icons.edit_calendar_rounded, color: Color(0xFFB45309), size: 20),
+                    ),
+                    title: const Text('Pengajuan Koreksi Presensi', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Lupa presensi atau kendala lokasi', style: TextStyle(fontSize: 11.5, color: AppColors.textSecondaryLight)),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const CorrectionsScreen()));
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFFF1F5F9),
+                      child: Icon(Icons.lock_reset_rounded, color: AppColors.textPrimaryLight, size: 20),
+                    ),
+                    title: const Text('Ubah Kata Sandi', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Ganti password akun Anda secara berkala', style: TextStyle(fontSize: 11.5, color: AppColors.textSecondaryLight)),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => _showChangePasswordDialog(context),
+                  ),
                 ],
               ),
             ),
@@ -222,10 +442,10 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Row(
-                    children: [
-                      const Text('Sertifikat SSL:', style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight)),
-                      const SizedBox(width: 8),
-                      const Text(
+                    children: const [
+                      Text('Sertifikat SSL:', style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight)),
+                      SizedBox(width: 8),
+                      Text(
                         'HTTPS Terenkripsi TLS 1.3',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.brand700),
                       ),
@@ -264,14 +484,19 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileRow(String label, String value) {
+  Widget _buildProfileRow(String label, String value, {Widget? action}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight)),
-          Text(value, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight)),
+          Row(
+            children: [
+              Text(value, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimaryLight)),
+              ?action,
+            ],
+          ),
         ],
       ),
     );

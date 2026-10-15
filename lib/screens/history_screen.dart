@@ -207,28 +207,38 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
           ),
 
-          // History List
+          // History List with Pull to Refresh
           Expanded(
-            child: attProvider.isLoadingHistory
-                ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5))
-                : history.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+            child: RefreshIndicator(
+              onRefresh: () async => _loadHistory(),
+              color: AppColors.brand600,
+              child: attProvider.isLoadingHistory
+                  ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5))
+                  : history.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           children: [
-                            Icon(Icons.history_rounded, size: 54, color: Colors.grey.shade400),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Belum ada rekaman presensi pada bulan ${_months[_selectedMonth - 1]} $_selectedYear',
-                              style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
+                            SizedBox(height: MediaQuery.of(context).size.height * 0.18),
+                            Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.history_rounded, size: 54, color: Colors.grey.shade400),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Belum ada rekaman presensi pada bulan ${_months[_selectedMonth - 1]} $_selectedYear',
+                                    style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: history.length,
-                        itemBuilder: (context, index) {
+                        )
+                      : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.all(16),
+                          itemCount: history.length,
+                          itemBuilder: (context, index) {
                           final item = history[index];
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),
@@ -296,7 +306,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           );
                         },
                       ),
-          ),
+              ),
+            ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(

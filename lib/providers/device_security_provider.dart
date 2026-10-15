@@ -96,4 +96,10 @@ class DeviceSecurityProvider extends ChangeNotifier {
     notifyListeners();
     return result;
   }
+
+  /// Open device GPS settings
+  Future<bool> openLocationSettings() => _locationService.openLocationSettings();
+
+  /// Open app permissions settings
+  Future<bool> openAppSettings() => _locationService.openAppSettings();
 }

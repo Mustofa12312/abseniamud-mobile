@@ -206,32 +206,42 @@ class _CorrectionsScreenState extends State<CorrectionsScreen> {
       appBar: AppBar(
         title: const Text('Pengajuan Koreksi', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
       ),
-      body: corrProvider.isLoading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5))
-          : corrections.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+      body: RefreshIndicator(
+        onRefresh: () => corrProvider.fetchCorrections(),
+        color: AppColors.brand600,
+        child: corrProvider.isLoading
+            ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5))
+            : corrections.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     children: [
-                      const Icon(Icons.playlist_add_check_rounded, size: 54, color: Color(0xFFCBD5E1)),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Belum ada pengajuan koreksi presensi.',
-                        style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: _showAddCorrectionDialog,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Buat Pengajuan Baru'),
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                      Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.playlist_add_check_rounded, size: 54, color: Color(0xFFCBD5E1)),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Belum ada pengajuan koreksi presensi.',
+                              style: TextStyle(fontSize: 13, color: AppColors.textSecondaryLight),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: _showAddCorrectionDialog,
+                              icon: const Icon(Icons.add),
+                              label: const Text('Buat Pengajuan Baru'),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: corrections.length,
-                  itemBuilder: (context, index) {
+                  )
+                : ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: corrections.length,
+                    itemBuilder: (context, index) {
                     final item = corrections[index];
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
@@ -290,6 +300,7 @@ class _CorrectionsScreenState extends State<CorrectionsScreen> {
                     );
                   },
                 ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddCorrectionDialog,
         backgroundColor: AppColors.brand600,

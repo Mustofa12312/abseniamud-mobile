@@ -4,6 +4,7 @@ import '../core/network/api_client.dart';
 import '../core/network/api_exception.dart';
 import '../core/storage/secure_storage_service.dart';
 import '../core/device/device_info_service.dart';
+import '../core/navigation/navigation_service.dart';
 import '../data/models/user_model.dart';
 
 enum AuthStatus { initial, loading, authenticated, unauthenticated }
@@ -27,6 +28,7 @@ class AuthProvider extends ChangeNotifier {
   AuthProvider() {
     _apiClient.onSessionExpired = () {
       logout(expired: true);
+      NavigationService.navigateToLogin(reason: 'Sesi Anda telah berakhir. Silakan login kembali.');
     };
   }
 
@@ -131,6 +133,54 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = null;
     }
     notifyListeners();
+  }
+
+
+
+  /// Update user contact information (phone, address)
+  Future<Map<String, dynamic>> updateContact({String? phone, String? address}) async {
+    try {
+      final payload = {
+        'phone': ?phone,
+        'address': ?address,
+      };
+
+      final response = await _apiClient.put(ApiConstants.me, data: payload);
+      if (response != null && response['success'] == true) {
+        // Refresh profile
+        await checkAuth();
+        return {'success': true, 'message': response['message'] ?? 'Profil berhasil diperbarui.'};
+      }
+      return {'success': false, 'message': response?['message'] ?? 'Gagal memperbarui profil.'};
+    } on ApiException catch (e) {
+      return {'success': false, 'message': e.message};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kendala: ${e.toString()}'};
+    }
+  }
+
+  /// Change password
+  Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final payload = {
+        'current_password': currentPassword,
+        'new_password': newPassword,
+        'new_password_confirmation': newPassword,
+      };
+
+      final response = await _apiClient.put(ApiConstants.me, data: payload);
+      if (response != null && response['success'] == true) {
+        return {'success': true, 'message': response['message'] ?? 'Kata sandi berhasil diubah.'};
+      }
+      return {'success': false, 'message': response?['message'] ?? 'Gagal mengubah kata sandi.'};
+    } on ApiException catch (e) {
+      return {'success': false, 'message': e.message};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kendala: ${e.toString()}'};
+    }
   }
 
   void clearError() {

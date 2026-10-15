@@ -182,6 +182,7 @@ class AttendanceProvider extends ChangeNotifier {
       final payload = {
         'latitude': latitude,
         'longitude': longitude,
+        'accuracy': accuracy,
         'location_id': ?locationId,
       };
 

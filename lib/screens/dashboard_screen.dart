@@ -9,7 +9,10 @@ import '../providers/device_security_provider.dart';
 import '../providers/schedule_provider.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/mock_location_warning.dart';
+import '../data/models/announcement_model.dart';
 import 'main_navigation_screen.dart';
+import 'leaves_screen.dart';
+import 'corrections_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -59,6 +62,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _getDayName(DateTime date) {
     const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     return days[date.weekday % 7];
+  }
+
+  void _showAnnouncementModal(AnnouncementModel ann) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(ann.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (ann.isImportant) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'PENGUMUMAN PENTING',
+                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFFB45309)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                Text(
+                  ann.content,
+                  style: const TextStyle(fontSize: 13.5, height: 1.5, color: AppColors.textPrimaryLight),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Tutup'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -252,12 +299,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Mock Location Alert if detected
-                    if (devProvider.isMockDetected) ...[
+                    // Mock Location or Location Error Alert
+                    if (devProvider.isMockDetected || (devProvider.lastLocationResult != null && !devProvider.lastLocationResult!.isSuccess)) ...[
                       MockLocationWarning(
-                        isMockDetected: true,
+                        isMockDetected: devProvider.isMockDetected,
                         reason: devProvider.mockReason,
+                        errorMessage: !devProvider.isMockDetected ? devProvider.lastLocationResult?.errorMessage : null,
                         onRefresh: () => devProvider.refreshLocation(),
+                        onOpenSettings: () async {
+                          final isPerm = (devProvider.lastLocationResult?.errorMessage ?? '').toLowerCase().contains('izin');
+                          if (isPerm) {
+                            await devProvider.openAppSettings();
+                          } else {
+                            await devProvider.openLocationSettings();
+                          }
+                        },
                       ),
                       const SizedBox(height: 12),
                     ],
@@ -337,6 +393,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             icon: Icons.cancel_rounded,
                             color: AppColors.statusAlpha,
                             bgColor: const Color(0xFFFEF2F2),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Quick Action Row (Izin & Koreksi)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const LeavesScreen()));
+                            },
+                            icon: const Icon(Icons.assignment_turned_in_rounded, size: 16, color: AppColors.brand700),
+                            label: const Text('Ajukan Izin / Cuti', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.brand800)),
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              side: const BorderSide(color: AppColors.brand200),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const CorrectionsScreen()));
+                            },
+                            icon: const Icon(Icons.edit_calendar_rounded, size: 16, color: Color(0xFFB45309)),
+                            label: const Text('Koreksi Presensi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF9A3412))),
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              side: const BorderSide(color: Color(0xFFFED7AA)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
                           ),
                         ),
                       ],
@@ -500,62 +594,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       const SizedBox(height: 12),
                       ...attProvider.announcements.map((ann) {
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: ann.isImportant ? AppColors.accent400 : AppColors.borderLight,
-                              width: ann.isImportant ? 1.5 : 1,
+                        return InkWell(
+                          onTap: () => _showAnnouncementModal(ann),
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: ann.isImportant ? AppColors.accent400 : AppColors.borderLight,
+                                width: ann.isImportant ? 1.5 : 1,
+                              ),
                             ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  if (ann.isImportant) ...[
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFEF3C7),
-                                        borderRadius: BorderRadius.circular(4),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    if (ann.isImportant) ...[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFEF3C7),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: const Text(
+                                          'PENTING',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFFB45309),
+                                          ),
+                                        ),
                                       ),
-                                      child: const Text(
-                                        'PENTING',
-                                        style: TextStyle(
-                                          fontSize: 10,
+                                      const SizedBox(width: 8),
+                                    ],
+                                    Expanded(
+                                      child: Text(
+                                        ann.title,
+                                        style: const TextStyle(
+                                          fontSize: 13.5,
                                           fontWeight: FontWeight.w700,
-                                          color: Color(0xFFB45309),
+                                          color: AppColors.textPrimaryLight,
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    const Icon(Icons.open_in_new_rounded, size: 14, color: AppColors.textMutedLight),
                                   ],
-                                  Expanded(
-                                    child: Text(
-                                      ann.title,
-                                      style: const TextStyle(
-                                        fontSize: 13.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.textPrimaryLight,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                ann.content,
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  color: AppColors.textSecondaryLight,
-                                  height: 1.4,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 6),
+                                Text(
+                                  ann.content,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    color: AppColors.textSecondaryLight,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       }),

@@ -49,6 +49,16 @@ class LocationService {
     return await Geolocator.requestPermission();
   }
 
+  /// Open device system location settings
+  Future<bool> openLocationSettings() async {
+    return await Geolocator.openLocationSettings();
+  }
+
+  /// Open application permissions settings
+  Future<bool> openAppSettings() async {
+    return await Geolocator.openAppSettings();
+  }
+
   /// Get current position with strict anti-mock location checks
   Future<LocationSecurityResult> getCurrentPositionSecure({
     double targetLat = defaultCampusLat,
