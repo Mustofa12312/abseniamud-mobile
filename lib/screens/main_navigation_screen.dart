@@ -18,10 +18,14 @@ class MainNavigationScreen extends StatefulWidget {
   });
 
   @override
-  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  State<MainNavigationScreen> createState() => MainNavigationScreenState();
+
+  static MainNavigationScreenState? of(BuildContext context) {
+    return context.findAncestorStateOfType<MainNavigationScreenState>();
+  }
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> {
+class MainNavigationScreenState extends State<MainNavigationScreen> {
   late int _currentIndex;
 
   final List<Widget> _screens = const [

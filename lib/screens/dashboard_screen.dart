@@ -207,7 +207,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                DateFormat('HH:mm:ss').format(_currentTime) + ' WIB',
+                                '${DateFormat('HH:mm:ss').format(_currentTime)} WIB',
                                 style: const TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w800,
@@ -357,7 +357,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         InkWell(
                           onTap: () {
-                            final nav = context.findAncestorStateOfType<_MainNavigationScreenState>();
+                            final nav = MainNavigationScreen.of(context);
                             nav?.switchTab(3); // Switch to Jadwal tab
                           },
                           child: const Text(
@@ -681,7 +681,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     height: 44,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        final nav = context.findAncestorStateOfType<_MainNavigationScreenState>();
+                        final nav = MainNavigationScreen.of(context);
                         nav?.switchTab(1); // Switch to Presensi
                       },
                       icon: const Icon(Icons.fingerprint_rounded),
@@ -731,7 +731,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     height: 44,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        final nav = context.findAncestorStateOfType<_MainNavigationScreenState>();
+                        final nav = MainNavigationScreen.of(context);
                         nav?.switchTab(1); // Switch to Presensi
                       },
                       icon: const Icon(Icons.logout_rounded),

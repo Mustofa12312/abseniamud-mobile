@@ -182,8 +182,7 @@ class AttendanceProvider extends ChangeNotifier {
       final payload = {
         'latitude': latitude,
         'longitude': longitude,
-        'accuracy': accuracy,
-        if (locationId != null) 'location_id': locationId,
+        'location_id': ?locationId,
       };
 
       final response = await _apiClient.post(ApiConstants.checkIn, data: payload);
