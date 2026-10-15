@@ -23,10 +23,11 @@ class LeaveProvider extends ChangeNotifier {
 
     try {
       final response = await _apiClient.get(ApiConstants.leaves);
-      if (response != null && response['data'] != null) {
+      if (response != null && response['data'] is List) {
         final list = response['data'] as List;
         _leaves = list
-            .map((item) => LeaveModel.fromJson(item as Map<String, dynamic>))
+            .whereType<Map>()
+            .map((item) => LeaveModel.fromJson(Map<String, dynamic>.from(item)))
             .toList();
       }
     } catch (_) {}

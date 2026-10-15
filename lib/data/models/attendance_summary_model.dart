@@ -17,15 +17,22 @@ class AttendanceSummaryModel {
     required this.total,
   });
 
+  static int _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value != null) return int.tryParse(value.toString()) ?? 0;
+    return 0;
+  }
+
   factory AttendanceSummaryModel.fromJson(Map<String, dynamic> json) {
     return AttendanceSummaryModel(
-      period: json['period'] ?? '',
-      hadir: json['hadir'] ?? 0,
-      terlambat: json['terlambat'] ?? 0,
-      tidakHadir: json['tidak_hadir'] ?? 0,
-      izinSakit: json['izin_sakit'] ?? 0,
-      belumCheckout: json['belum_checkout'] ?? 0,
-      total: json['total'] ?? 0,
+      period: json['period']?.toString() ?? '',
+      hadir: _toInt(json['hadir']),
+      terlambat: _toInt(json['terlambat']),
+      tidakHadir: _toInt(json['tidak_hadir']),
+      izinSakit: _toInt(json['izin_sakit']),
+      belumCheckout: _toInt(json['belum_checkout']),
+      total: _toInt(json['total']),
     );
   }
 

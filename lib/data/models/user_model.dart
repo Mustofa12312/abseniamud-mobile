@@ -13,7 +13,9 @@ class LecturerInfo {
 
   factory LecturerInfo.fromJson(Map<String, dynamic> json) {
     return LecturerInfo(
-      id: json['id'] as int?,
+      id: json['id'] is int
+          ? json['id']
+          : (json['id'] != null ? int.tryParse(json['id'].toString()) : null),
       nidn: json['nidn']?.toString(),
       nip: json['nip']?.toString(),
       phone: json['phone']?.toString(),
@@ -54,9 +56,11 @@ class UserModel {
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'] is int ? json['id'] : int.tryParse(json['id'].toString()) ?? 0,
-      name: json['name'] ?? '',
-      email: json['email'] ?? '',
-      roleId: json['role_id'] as int?,
+      name: json['name']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      roleId: json['role_id'] is int
+          ? json['role_id']
+          : (json['role_id'] != null ? int.tryParse(json['role_id'].toString()) : null),
       roleName: json['role'] is String
           ? json['role']
           : (json['role'] is Map ? json['role']['name'] : null),

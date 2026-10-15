@@ -61,8 +61,8 @@ class AttendanceProvider extends ChangeNotifier {
 
     try {
       final response = await _apiClient.get(ApiConstants.attendanceToday);
-      if (response != null && response['success'] == true && response['data'] != null) {
-        _todayStatus = AttendanceTodayModel.fromJson(response['data'] as Map<String, dynamic>);
+      if (response != null && response['success'] == true && response['data'] is Map) {
+        _todayStatus = AttendanceTodayModel.fromJson(Map<String, dynamic>.from(response['data'] as Map));
       }
     } catch (_) {}
 
@@ -74,10 +74,11 @@ class AttendanceProvider extends ChangeNotifier {
   Future<List<CampusLocationModel>> fetchCampusLocations() async {
     try {
       final response = await _apiClient.get(ApiConstants.locations);
-      if (response != null && response['data'] != null) {
+      if (response != null && response['data'] is List) {
         final list = response['data'] as List;
         _campusLocations = list
-            .map((item) => CampusLocationModel.fromJson(item as Map<String, dynamic>))
+            .whereType<Map>()
+            .map((item) => CampusLocationModel.fromJson(Map<String, dynamic>.from(item)))
             .where((loc) => loc.isActive)
             .toList();
         notifyListeners();
@@ -117,10 +118,11 @@ class AttendanceProvider extends ChangeNotifier {
         queryParameters: query.isNotEmpty ? query : null,
       );
 
-      if (response != null && response['data'] != null) {
+      if (response != null && response['data'] is List) {
         final list = response['data'] as List;
         _historyList = list
-            .map((item) => AttendanceHistoryItem.fromJson(item as Map<String, dynamic>))
+            .whereType<Map>()
+            .map((item) => AttendanceHistoryItem.fromJson(Map<String, dynamic>.from(item)))
             .toList();
       }
     } catch (_) {}
@@ -144,8 +146,8 @@ class AttendanceProvider extends ChangeNotifier {
         queryParameters: query.isNotEmpty ? query : null,
       );
 
-      if (response != null && response['data'] != null) {
-        _summary = AttendanceSummaryModel.fromJson(response['data'] as Map<String, dynamic>);
+      if (response != null && response['data'] is Map) {
+        _summary = AttendanceSummaryModel.fromJson(Map<String, dynamic>.from(response['data'] as Map));
       }
     } catch (_) {}
 
@@ -157,10 +159,11 @@ class AttendanceProvider extends ChangeNotifier {
   Future<void> fetchAnnouncements() async {
     try {
       final response = await _apiClient.get(ApiConstants.announcements);
-      if (response != null && response['data'] != null) {
+      if (response != null && response['data'] is List) {
         final list = response['data'] as List;
         _announcements = list
-            .map((item) => AnnouncementModel.fromJson(item as Map<String, dynamic>))
+            .whereType<Map>()
+            .map((item) => AnnouncementModel.fromJson(Map<String, dynamic>.from(item)))
             .toList();
         notifyListeners();
       }
