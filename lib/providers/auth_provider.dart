@@ -47,8 +47,8 @@ class AuthProvider extends ChangeNotifier {
 
       // Try fetching fresh profile from /me
       final response = await _apiClient.get(ApiConstants.me);
-      if (response != null && response['success'] == true && response['data'] != null) {
-        _currentUser = UserModel.fromJson(response['data'] as Map<String, dynamic>);
+      if (response != null && response['success'] == true && response['data'] is Map) {
+        _currentUser = UserModel.fromJson(Map<String, dynamic>.from(response['data'] as Map));
         await _storage.saveUser(_currentUser!.toJson());
         _status = AuthStatus.authenticated;
         notifyListeners();
@@ -87,10 +87,12 @@ class AuthProvider extends ChangeNotifier {
 
       final response = await _apiClient.post(ApiConstants.login, data: payload);
 
-      if (response != null && response['success'] == true && response['data'] != null) {
-        final data = response['data'] as Map<String, dynamic>;
-        final token = data['token'] as String;
-        final userData = data['user'] as Map<String, dynamic>;
+      if (response != null && response['success'] == true && response['data'] is Map) {
+        final data = Map<String, dynamic>.from(response['data'] as Map);
+        final token = data['token']?.toString() ?? '';
+        final userData = data['user'] is Map
+            ? Map<String, dynamic>.from(data['user'] as Map)
+            : <String, dynamic>{};
 
         await _storage.saveToken(token);
         _currentUser = UserModel.fromJson(userData);

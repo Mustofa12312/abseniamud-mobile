@@ -23,10 +23,11 @@ class CorrectionProvider extends ChangeNotifier {
 
     try {
       final response = await _apiClient.get(ApiConstants.corrections);
-      if (response != null && response['data'] != null) {
+      if (response != null && response['data'] is List) {
         final list = response['data'] as List;
         _corrections = list
-            .map((item) => AttendanceCorrectionModel.fromJson(item as Map<String, dynamic>))
+            .whereType<Map>()
+            .map((item) => AttendanceCorrectionModel.fromJson(Map<String, dynamic>.from(item)))
             .toList();
       }
     } catch (_) {}

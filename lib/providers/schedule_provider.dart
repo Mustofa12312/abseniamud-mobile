@@ -28,17 +28,19 @@ class ScheduleProvider extends ChangeNotifier {
 
     try {
       final response = await _apiClient.get(ApiConstants.schedules);
-      if (response != null && response['data'] != null) {
-        final data = response['data'] as Map<String, dynamic>;
+      if (response != null && response['data'] is Map) {
+        final data = response['data'] as Map;
         final Map<String, List<ScheduleItem>> grouped = {};
 
         data.forEach((day, list) {
+          final dayStr = day.toString();
           if (list is List) {
-            grouped[day] = list
-                .map((item) => ScheduleItem.fromJson(item as Map<String, dynamic>))
+            grouped[dayStr] = list
+                .whereType<Map>()
+                .map((item) => ScheduleItem.fromJson(Map<String, dynamic>.from(item)))
                 .toList();
           } else {
-            grouped[day] = [];
+            grouped[dayStr] = [];
           }
         });
 

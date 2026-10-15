@@ -145,16 +145,17 @@ class ApiClient {
 
       String message = 'Terjadi kesalahan pada server ($statusCode).';
 
-      if (data is Map<String, dynamic>) {
-        if (data.containsKey('message') && data['message'] != null) {
-          message = data['message'].toString();
-        } else if (data.containsKey('error') && data['error'] != null) {
-          message = data['error'].toString();
+      if (data is Map) {
+        final dataMap = Map<String, dynamic>.from(data);
+        if (dataMap.containsKey('message') && dataMap['message'] != null) {
+          message = dataMap['message'].toString();
+        } else if (dataMap.containsKey('error') && dataMap['error'] != null) {
+          message = dataMap['error'].toString();
         }
 
         // Handle Laravel validation errors (422)
-        if (data.containsKey('errors') && data['errors'] is Map) {
-          final errorsMap = data['errors'] as Map<String, dynamic>;
+        if (dataMap.containsKey('errors') && dataMap['errors'] is Map) {
+          final errorsMap = Map<String, dynamic>.from(dataMap['errors'] as Map);
           final firstKey = errorsMap.keys.firstOrNull;
           if (firstKey != null) {
             final firstErrorList = errorsMap[firstKey];

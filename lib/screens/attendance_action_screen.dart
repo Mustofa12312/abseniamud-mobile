@@ -309,7 +309,10 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
                     Expanded(
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<CampusLocationModel>(
-                          value: devProvider.selectedCampus ?? devProvider.campusLocations.first,
+                          value: devProvider.campusLocations.firstWhere(
+                            (loc) => loc.id == devProvider.selectedCampus?.id,
+                            orElse: () => devProvider.campusLocations.first,
+                          ),
                           isExpanded: true,
                           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimaryLight),
                           items: devProvider.campusLocations.map((loc) {

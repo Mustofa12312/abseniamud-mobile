@@ -36,4 +36,14 @@ class CampusLocationModel {
       isActive: json['is_active'] == true || json['is_active'] == 1,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CampusLocationModel &&
+          runtimeType == other.runtimeType &&
+          id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }

@@ -47,7 +47,11 @@ class SecureStorageService {
     final jsonStr = prefs.getString(ApiConstants.keyUser);
     if (jsonStr != null && jsonStr.isNotEmpty) {
       try {
-        return jsonDecode(jsonStr) as Map<String, dynamic>;
+        final decoded = jsonDecode(jsonStr);
+        if (decoded is Map) {
+          return Map<String, dynamic>.from(decoded);
+        }
+        return null;
       } catch (_) {
         return null;
       }

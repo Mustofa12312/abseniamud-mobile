@@ -29,6 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _loadBaseUrl() async {
     final url = await SecureStorageService().getBaseUrl();
+    if (!mounted) return;
     setState(() {
       _currentBaseUrl = url;
     });
@@ -115,9 +116,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 final newUrl = controller.text.trim();
                 if (newUrl.isNotEmpty) {
                   await SecureStorageService().saveBaseUrl(newUrl);
-                  setState(() {
-                    _currentBaseUrl = newUrl;
-                  });
+                  if (mounted) {
+                    setState(() {
+                      _currentBaseUrl = newUrl;
+                    });
+                  }
                 }
                 nav.pop();
               },

@@ -47,6 +47,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     // 1. Detect hardware & device info
     await devProvider.initDevice();
 
+    if (!mounted) return;
+
     setState(() {
       _statusText = 'Menghubungkan ke API IAIMU...';
     });
