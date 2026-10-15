@@ -78,7 +78,7 @@ class ProfileScreen extends StatelessWidget {
                 border: Border.all(color: AppColors.borderLight),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
+                    color: Colors.black.withValues(alpha: 0.02),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   )
@@ -95,7 +95,7 @@ class ProfileScreen extends StatelessWidget {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.brand600.withOpacity(0.25),
+                          color: AppColors.brand600.withValues(alpha: 0.25),
                           blurRadius: 16,
                           offset: const Offset(0, 6),
                         )

@@ -17,11 +17,10 @@ class AppTheme {
         secondary: AppColors.accent500,
         onSecondary: Colors.white,
         surface: AppColors.surfaceLight,
-        onSurface: AppColors.textPrimaryLight,
         error: AppColors.statusAlpha,
         onError: Colors.white,
       ),
-      textTheme: GoogleFonts.interTextTheme(),
+      fontFamily: GoogleFonts.inter().fontFamily,
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,

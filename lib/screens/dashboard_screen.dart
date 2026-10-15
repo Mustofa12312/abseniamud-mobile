@@ -116,7 +116,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: Image.asset(
                             'assets/images/logo.png',
                             fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => const Icon(
+                            errorBuilder: (context, error, stackTrace) => const Icon(
                               Icons.school_rounded,
                               color: AppColors.brand600,
                             ),
@@ -142,7 +142,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: AppColors.brand800.withOpacity(0.8),
+                                      color: AppColors.brand800.withValues(alpha: 0.8),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -187,9 +187,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.08),
+                        color: Colors.white.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white.withOpacity(0.12)),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -220,9 +220,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: AppColors.brand500.withOpacity(0.2),
+                              color: AppColors.brand500.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.brand400.withOpacity(0.4)),
+                              border: Border.all(color: AppColors.brand400.withValues(alpha: 0.4)),
                             ),
                             child: Row(
                               children: const [
@@ -597,7 +597,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         border: Border.all(color: AppColors.borderLight),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 14,
             offset: const Offset(0, 4),
           )
@@ -875,7 +875,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [

@@ -163,7 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
+                          color: Colors.black.withValues(alpha: 0.15),
                           blurRadius: 16,
                           offset: const Offset(0, 4),
                         ),
@@ -172,7 +172,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Image.asset(
                       'assets/images/logo.png',
                       fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => const Icon(
+                      errorBuilder: (context, error, stackTrace) => const Icon(
                         Icons.school_rounded,
                         size: 44,
                         color: AppColors.brand600,
