@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/theme/app_colors.dart';
 import '../data/models/campus_location_model.dart';
@@ -53,6 +54,7 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
     }
 
     // 3. Confirm dialog
+    HapticFeedback.lightImpact();
     final confirmed = await _showConfirmationDialog(
       isCheckIn: isCheckIn,
       campus: devProvider.selectedCampus,
@@ -62,6 +64,8 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
     );
 
     if (confirmed != true) return;
+
+    HapticFeedback.mediumImpact();
 
     // 4. Submit to Laravel API
     Map<String, dynamic> result;
@@ -83,8 +87,10 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
     if (!mounted) return;
 
     if (result['success'] == true) {
+      HapticFeedback.mediumImpact();
       _showSuccessDialog(result['message'] ?? 'Presensi berhasil dicatat!');
     } else {
+      HapticFeedback.heavyImpact();
       _showErrorDialog(result['message'] ?? 'Gagal memproses presensi.');
     }
   }

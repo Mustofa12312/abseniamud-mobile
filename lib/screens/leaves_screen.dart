@@ -27,6 +27,7 @@ class _LeavesScreenState extends State<LeavesScreen> {
     DateTime endDate = DateTime.now();
     String selectedType = 'Izin';
     final reasonController = TextEditingController();
+    final docController = TextEditingController();
 
     final List<String> leaveTypes = ['Izin', 'Sakit', 'Cuti'];
 
@@ -196,6 +197,18 @@ class _LeavesScreenState extends State<LeavesScreen> {
                         return null;
                       },
                     ),
+                    const SizedBox(height: 14),
+
+                    // Document Reference (Optional)
+                    const Text('Nomor Surat / Link Dokumen Pendukung (Opsional)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: docController,
+                      decoration: const InputDecoration(
+                        hintText: 'Contoh: No. Surat Dokter / Bukti Penugasan',
+                        prefixIcon: Icon(Icons.attachment_rounded, size: 20),
+                      ),
+                    ),
                     const SizedBox(height: 20),
 
                     // Submit Button
@@ -211,11 +224,13 @@ class _LeavesScreenState extends State<LeavesScreen> {
                                     if (!formKey.currentState!.validate()) return;
                                     final nav = Navigator.of(modalContext);
                                     final messenger = ScaffoldMessenger.of(context);
+                                    final docText = docController.text.trim();
                                     final result = await provider.submitLeave(
                                       type: selectedType,
                                       startDate: DateFormat('yyyy-MM-dd').format(startDate),
                                       endDate: DateFormat('yyyy-MM-dd').format(endDate),
                                       reason: reasonController.text.trim(),
+                                      documentPath: docText.isNotEmpty ? docText : null,
                                     );
 
                                     nav.pop();
@@ -346,6 +361,23 @@ class _LeavesScreenState extends State<LeavesScreen> {
                                 height: 1.3,
                               ),
                             ),
+                            if (item.documentPath != null && item.documentPath!.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  const Icon(Icons.attachment_rounded, size: 14, color: AppColors.brand700),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      'Dokumen: ${item.documentPath}',
+                                      style: const TextStyle(fontSize: 11.5, color: AppColors.brand700, fontWeight: FontWeight.w600),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                             if (item.adminNotes != null && item.adminNotes!.isNotEmpty) ...[
                               const SizedBox(height: 10),
                               Container(

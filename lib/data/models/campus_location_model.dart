@@ -37,6 +37,18 @@ class CampusLocationModel {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'latitude': latitude,
+      'longitude': longitude,
+      'radius': radius,
+      'max_accuracy': maxAccuracy,
+      'is_active': isActive,
+    };
+  }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

@@ -42,6 +42,7 @@ class LeaveProvider extends ChangeNotifier {
     required String startDate,
     required String endDate,
     required String reason,
+    String? documentPath,
   }) async {
     _isSubmitting = true;
     notifyListeners();
@@ -52,6 +53,7 @@ class LeaveProvider extends ChangeNotifier {
         'start_date': startDate,
         'end_date': endDate,
         'reason': reason,
+        'document_path': ?documentPath,
       };
 
       final response = await _apiClient.post(ApiConstants.leaves, data: payload);
