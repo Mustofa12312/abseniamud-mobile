@@ -25,7 +25,7 @@ class MockLocationWarning extends StatelessWidget {
           border: Border.all(color: AppColors.securityAlertBorder, width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.red.withOpacity(0.08),
+              color: Colors.red.withValues(alpha: 0.08),
               blurRadius: 10,
               offset: const Offset(0, 4),
             )
@@ -39,7 +39,7 @@ class MockLocationWarning extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.15),
+                    color: Colors.red.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(

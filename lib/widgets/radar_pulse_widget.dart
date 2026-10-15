@@ -67,7 +67,7 @@ class _RadarPulseWidgetState extends State<RadarPulseWidget> with SingleTickerPr
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: activeColor.withOpacity((1 - _controller.value) * 0.4),
+                        color: activeColor.withValues(alpha: (1 - _controller.value) * 0.4),
                         width: 2,
                       ),
                     ),
@@ -80,7 +80,7 @@ class _RadarPulseWidgetState extends State<RadarPulseWidget> with SingleTickerPr
                     height: 110 + (_controller.value * 25),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: activeColor.withOpacity((1 - _controller.value) * 0.15),
+                      color: activeColor.withValues(alpha: (1 - _controller.value) * 0.15),
                     ),
                   ),
 
@@ -101,7 +101,7 @@ class _RadarPulseWidgetState extends State<RadarPulseWidget> with SingleTickerPr
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: activeColor.withOpacity(0.35),
+                        color: activeColor.withValues(alpha: 0.35),
                         blurRadius: 18,
                         offset: const Offset(0, 6),
                       )
