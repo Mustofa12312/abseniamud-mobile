@@ -22,6 +22,14 @@ class AttendanceTodayModel {
   bool get isCheckedOut => status == 'CHECKED_OUT';
   bool get isHoliday => status == 'HOLIDAY';
 
+  static int? _toIntNullable(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.round();
+    final d = double.tryParse(value.toString());
+    return d?.round();
+  }
+
   factory AttendanceTodayModel.fromJson(Map<String, dynamic> json) {
     return AttendanceTodayModel(
       status: json['status'] ?? 'NOT_CHECKED_IN',
@@ -29,12 +37,8 @@ class AttendanceTodayModel {
       checkInAt: json['check_in_at'] as String?,
       checkOutAt: json['check_out_at'] as String?,
       location: json['location'] as String?,
-      distance: json['distance'] is int
-          ? json['distance']
-          : (json['distance'] != null ? int.tryParse(json['distance'].toString()) : null),
-      accuracy: json['accuracy'] is int
-          ? json['accuracy']
-          : (json['accuracy'] != null ? int.tryParse(json['accuracy'].toString()) : null),
+      distance: _toIntNullable(json['distance']),
+      accuracy: _toIntNullable(json['accuracy']),
     );
   }
 
