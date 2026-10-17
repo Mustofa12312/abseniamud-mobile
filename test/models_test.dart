@@ -97,5 +97,27 @@ void main() {
       expect(leave.isApproved, true);
       expect(leave.documentPath, 'surat-dokter-10.pdf');
     });
+
+    test('CampusLocationModel supports Laravel LocationResource keys (lat, lng, accuracy)', () {
+      final resourceJson = {
+        'id': 2,
+        'name': 'Gedung B Pascasarjana',
+        'lat': -7.165432,
+        'lng': 113.484321,
+        'radius': 60,
+        'accuracy': 45,
+        'is_active': true,
+        'status': 'Aktif',
+      };
+
+      final loc = CampusLocationModel.fromJson(resourceJson);
+      expect(loc.id, 2);
+      expect(loc.name, 'Gedung B Pascasarjana');
+      expect(loc.latitude, -7.165432);
+      expect(loc.longitude, 113.484321);
+      expect(loc.radius, 60.0);
+      expect(loc.maxAccuracy, 45.0);
+      expect(loc.isActive, true);
+    });
   });
 }

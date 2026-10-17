@@ -65,10 +65,12 @@ class UserModel {
           ? json['role']
           : (json['role'] is Map ? json['role']['name'] : null),
       attendanceType: json['attendance_type'] as String?,
-      lecturer: json['lecturer'] != null && json['lecturer'] is Map<String, dynamic>
-          ? LecturerInfo.fromJson(json['lecturer'] as Map<String, dynamic>)
+      lecturer: json['lecturer'] != null && json['lecturer'] is Map
+          ? LecturerInfo.fromJson(Map<String, dynamic>.from(json['lecturer'] as Map))
           : null,
-      staffProfile: json['staff_profile'] as Map<String, dynamic>?,
+      staffProfile: json['staff_profile'] != null && json['staff_profile'] is Map
+          ? Map<String, dynamic>.from(json['staff_profile'] as Map)
+          : null,
     );
   }
 
