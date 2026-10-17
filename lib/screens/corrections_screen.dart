@@ -167,13 +167,22 @@ class _CorrectionsScreenState extends State<CorrectionsScreen> {
                                       reason: reasonController.text.trim(),
                                     );
 
-                                    nav.pop();
-                                    messenger.showSnackBar(
-                                      SnackBar(
-                                        content: Text(result['message']),
-                                        backgroundColor: result['success'] ? AppColors.brand600 : AppColors.statusAlpha,
-                                      ),
-                                    );
+                                    if (result['success'] == true) {
+                                      nav.pop();
+                                      messenger.showSnackBar(
+                                        SnackBar(
+                                          content: Text(result['message']),
+                                          backgroundColor: AppColors.brand600,
+                                        ),
+                                      );
+                                    } else {
+                                      messenger.showSnackBar(
+                                        SnackBar(
+                                          content: Text(result['message'] ?? 'Gagal mengirim pengajuan koreksi.'),
+                                          backgroundColor: AppColors.statusAlpha,
+                                        ),
+                                      );
+                                    }
                                   },
                             child: provider.isSubmitting
                                 ? const SizedBox(

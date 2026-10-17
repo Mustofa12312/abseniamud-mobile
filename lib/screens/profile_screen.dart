@@ -329,6 +329,23 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+                  ] else if (user?.staffProfile != null) ...[
+                    const Divider(height: 24),
+                    if (user!.staffProfile!['nip'] != null)
+                      _buildProfileRow('NIP / ID Tendik', user.staffProfile!['nip'].toString()),
+                    if (user.staffProfile!['department'] != null)
+                      _buildProfileRow('Unit / Bagian', user.staffProfile!['department'].toString()),
+                    _buildProfileRow(
+                      'No. HP / WA',
+                      user.staffProfile!['phone']?.toString() ?? 'Belum diatur',
+                      action: InkWell(
+                        onTap: () => _showEditContactDialog(context, user.staffProfile!['phone']?.toString()),
+                        child: const Padding(
+                          padding: EdgeInsets.only(left: 6),
+                          child: Icon(Icons.edit_outlined, size: 16, color: AppColors.brand600),
+                        ),
+                      ),
+                    ),
                   ],
                 ],
               ),

@@ -233,11 +233,13 @@ class _LeavesScreenState extends State<LeavesScreen> {
                                       documentPath: docText.isNotEmpty ? docText : null,
                                     );
 
-                                    nav.pop();
+                                    if (result['success'] == true) {
+                                      nav.pop();
+                                    }
                                     messenger.showSnackBar(
                                       SnackBar(
-                                        content: Text(result['message']),
-                                        backgroundColor: result['success'] ? AppColors.brand600 : AppColors.statusAlpha,
+                                        content: Text(result['message'] ?? 'Status tidak diketahui'),
+                                        backgroundColor: result['success'] == true ? AppColors.brand600 : AppColors.statusAlpha,
                                       ),
                                     );
                                   },

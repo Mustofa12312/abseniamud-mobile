@@ -22,7 +22,10 @@ class CorrectionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _apiClient.get(ApiConstants.corrections);
+      final response = await _apiClient.get(
+        ApiConstants.corrections,
+        queryParameters: {'per_page': 50},
+      );
       if (response != null && response['data'] is List) {
         final list = response['data'] as List;
         _corrections = list

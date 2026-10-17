@@ -8,14 +8,16 @@ class SecureStorageService {
   factory SecureStorageService() => _instance;
   SecureStorageService._internal();
 
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
 
   // Auth Token
   Future<void> saveToken(String token) async {
     await _secureStorage.write(key: ApiConstants.keyToken, value: token);
-    // Backup to shared prefs
+    // Cleanup any legacy plaintext token in shared preferences
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(ApiConstants.keyToken, token);
+    await prefs.remove(ApiConstants.keyToken);
   }
 
   Future<String?> getToken() async {
@@ -23,8 +25,15 @@ class SecureStorageService {
       final token = await _secureStorage.read(key: ApiConstants.keyToken);
       if (token != null && token.isNotEmpty) return token;
     } catch (_) {}
+    // Migration fallback: check legacy shared preferences once, migrate & delete
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(ApiConstants.keyToken);
+    final legacyToken = prefs.getString(ApiConstants.keyToken);
+    if (legacyToken != null && legacyToken.isNotEmpty) {
+      await _secureStorage.write(key: ApiConstants.keyToken, value: legacyToken);
+      await prefs.remove(ApiConstants.keyToken);
+      return legacyToken;
+    }
+    return null;
   }
 
   Future<void> deleteToken() async {

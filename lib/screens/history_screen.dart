@@ -22,6 +22,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
   ];
 
+  List<int> get _years {
+    final currentYear = DateTime.now().year;
+    final yearSet = <int>{currentYear - 2, currentYear - 1, currentYear, currentYear + 1, _selectedYear};
+    final list = yearSet.toList()..sort();
+    return list;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -168,7 +175,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   value: _selectedYear,
                   underline: const SizedBox.shrink(),
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimaryLight),
-                  items: [2024, 2025, 2026, 2027].map((yr) {
+                  items: _years.map((yr) {
                     return DropdownMenuItem<int>(
                       value: yr,
                       child: Text(yr.toString()),
