@@ -109,7 +109,9 @@ class AttendanceProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final Map<String, dynamic> query = {};
+      final Map<String, dynamic> query = {
+        'per_page': 50,
+      };
       if (month != null) query['month'] = month;
       if (year != null) query['year'] = year;
 

@@ -211,6 +211,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         color: Color(0xFFBBF7D0),
                                       ),
                                     ),
+                                  ] else if (user?.staffProfile?['nip'] != null) ...[
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'NIP: ${user!.staffProfile!['nip']}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFFBBF7D0),
+                                      ),
+                                    ),
                                   ]
                                 ],
                               ),
@@ -891,6 +900,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.brand900),
                       ),
                     ),
+                  ),
+                ] else if (today != null && today.isHoliday) ...[
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.weekend_rounded, size: 28, color: Color(0xFF64748B)),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'Hari Libur / Bukan Hari Kerja',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimaryLight,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Hari ini di luar jadwal kerja wajib Anda. Tidak perlu melakukan presensi.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondaryLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ],

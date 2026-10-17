@@ -595,6 +595,32 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
                   ],
                 ),
               ),
+            ] else if (today?.isHoliday == true) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.borderLight),
+                ),
+                child: Column(
+                  children: const [
+                    Icon(Icons.weekend_rounded, size: 42, color: Color(0xFF64748B)),
+                    SizedBox(height: 10),
+                    Text(
+                      'Hari Libur / Bukan Hari Kerja Wajib',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimaryLight),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Hari ini di luar jadwal kerja wajib Anda. Presensi tidak diperlukan.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight),
+                    ),
+                  ],
+                ),
+              ),
             ],
 
             const SizedBox(height: 16),
