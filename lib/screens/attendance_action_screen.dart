@@ -595,7 +595,7 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
                   ],
                 ),
               ),
-            ] else if (today?.isHoliday == true) ...[
+            ] else if (today.isHoliday == true) ...[
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
