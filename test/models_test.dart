@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:dio/dio.dart';
 import 'package:iaimu_mobile/data/models/attendance_today_model.dart';
 import 'package:iaimu_mobile/data/models/attendance_history_model.dart';
 import 'package:iaimu_mobile/data/models/campus_location_model.dart';
@@ -118,6 +119,11 @@ void main() {
       expect(loc.radius, 60.0);
       expect(loc.maxAccuracy, 45.0);
       expect(loc.isActive, true);
+    });
+
+    test('Dio compose URL check', () {
+      final req = RequestOptions(path: '/auth/login', baseUrl: 'https://api.iaimiftahululum.com/api');
+      expect(req.uri.toString(), 'https://api.iaimiftahululum.com/api/auth/login');
     });
   });
 }
