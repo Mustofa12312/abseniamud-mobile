@@ -934,12 +934,15 @@ class ProfileScreen extends StatelessWidget {
                     Row(
                       children: const [
                         Text('Sertifikat SSL:', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                        SizedBox(width: 8),
+                        SizedBox(width: 6),
                         Icon(Icons.lock_rounded, size: 13, color: Color(0xFF16A34A)),
                         SizedBox(width: 4),
-                        Text(
-                          'HTTPS Terenkripsi TLS 1.3 (Secure Channel)',
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF166534)),
+                        Expanded(
+                          child: Text(
+                            'HTTPS Terenkripsi TLS 1.3',
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF166534)),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),

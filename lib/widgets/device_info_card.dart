@@ -192,7 +192,6 @@ class DeviceInfoCard extends StatelessWidget {
                   icon: Icons.android_rounded,
                   label: 'Sistem Operasi',
                   value: '${meta.osVersion} (API ${meta.sdkInt})',
-                  badgeText: 'Android',
                 ),
                 const Divider(height: 20, color: Color(0xFFF1F5F9)),
                 _buildFingerprintRow(
@@ -214,7 +213,6 @@ class DeviceInfoCard extends StatelessWidget {
                   icon: Icons.terminal_rounded,
                   label: 'Versi Aplikasi',
                   value: 'v${meta.appVersion} (${meta.buildNumber})',
-                  badgeText: 'Release',
                 ),
               ],
             ),
@@ -228,7 +226,6 @@ class DeviceInfoCard extends StatelessWidget {
     required IconData icon,
     required String label,
     required String value,
-    String? badgeText,
     Color? badgeColor,
     Color? badgeTextColor,
     Color? badgeBorder,
@@ -253,52 +250,40 @@ class DeviceInfoCard extends StatelessWidget {
             color: Color(0xFF64748B),
           ),
         ),
-        const Spacer(),
-        if (badgeText != null) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              badgeText,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
-            ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: badgeColor != null
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                    decoration: BoxDecoration(
+                      color: badgeColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: badgeBorder ?? Colors.transparent),
+                    ),
+                    child: Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: badgeTextColor ?? const Color(0xFF0F172A),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  )
+                : Text(
+                    value,
+                    textAlign: TextAlign.end,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0F172A),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
           ),
-          const SizedBox(width: 6),
-        ],
-        if (badgeColor != null) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-            decoration: BoxDecoration(
-              color: badgeColor,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: badgeBorder ?? Colors.transparent),
-            ),
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: badgeTextColor ?? const Color(0xFF0F172A),
-              ),
-            ),
-          ),
-        ] else ...[
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF0F172A),
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
+        ),
       ],
     );
   }
@@ -328,43 +313,51 @@ class DeviceInfoCard extends StatelessWidget {
             color: Color(0xFF64748B),
           ),
         ),
-        const Spacer(),
-        InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: () {
-            Clipboard.setData(ClipboardData(text: fingerprint));
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Device Fingerprint disalin ke clipboard'),
-                duration: Duration(seconds: 2),
-                backgroundColor: Color(0xFF0F172A),
-              ),
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: InkWell(
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  fingerprint.length > 14
-                      ? '${fingerprint.substring(0, 14)}...'
-                      : fingerprint,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: fingerprint));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Device Fingerprint disalin ke clipboard'),
+                    duration: Duration(seconds: 2),
+                    backgroundColor: Color(0xFF0F172A),
                   ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
-                const SizedBox(width: 4),
-                const Icon(Icons.copy_rounded, size: 12, color: Color(0xFF64748B)),
-              ],
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        fingerprint.length > 14
+                            ? '${fingerprint.substring(0, 14)}...'
+                            : fingerprint,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.copy_rounded, size: 12, color: Color(0xFF64748B)),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
