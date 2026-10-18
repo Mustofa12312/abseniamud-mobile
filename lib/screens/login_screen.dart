@@ -69,14 +69,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     super.dispose();
   }
 
-  void _fillCredentials(String email, String password) {
-    HapticFeedback.lightImpact();
-    setState(() {
-      _emailController.text = email;
-      _passwordController.text = password;
-    });
-  }
-
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) {
       HapticFeedback.mediumImpact();
@@ -595,79 +587,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
-
-                            // ── Quick Fill Demo Accounts ──
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: const [
-                                      Icon(Icons.bolt_rounded, size: 14, color: AppColors.accent600),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'Isi Cepat Akun Demo (1-Tap):',
-                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondaryLight),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: InkWell(
-                                          onTap: () => _fillCredentials('ahmad@iaimu.ac.id', 'password'),
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(color: AppColors.brand200),
-                                            ),
-                                            child: Column(
-                                              children: const [
-                                                Text('👨‍🏫 Dosen', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.brand800)),
-                                                Text('ahmad@iaimu.ac.id', style: TextStyle(fontSize: 9.5, color: AppColors.textSecondaryLight)),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: InkWell(
-                                          onTap: () => _fillCredentials('admin@iaimu.ac.id', 'password'),
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(color: const Color(0xFFCBD5E1)),
-                                            ),
-                                            child: Column(
-                                              children: const [
-                                                Text('⚙️ Admin', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF334155))),
-                                                Text('admin@iaimu.ac.id', style: TextStyle(fontSize: 9.5, color: AppColors.textSecondaryLight)),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 22),
+                            const SizedBox(height: 24),
 
                             // ── Modern Gradient Login Button ──
                             Container(
