@@ -235,8 +235,14 @@ class SmartNotificationProvider extends ChangeNotifier {
     }
   }
 
+  void removeItem(String id) {
+    _items.removeWhere((e) => e.id == id);
+    notifyListeners();
+    _savePreferences();
+  }
+
   // ─── TRIGGER 3: APPROVAL STATUS UPDATES (LEAVES & CORRECTIONS) ───
-  Future<void> checkApprovalUpdates(List<LeaveModel> leaves, List<CorrectionModel> corrections) async {
+  Future<void> checkApprovalUpdates(List<LeaveModel> leaves, List<AttendanceCorrectionModel> corrections) async {
     if (!_approvalAlertsEnabled) return;
     final prefs = await SharedPreferences.getInstance();
 
@@ -249,7 +255,7 @@ class SmartNotificationProvider extends ChangeNotifier {
         if (leave.status == 'APPROVED') {
           await addNotification(
             title: 'Pengajuan Cuti Disetujui ✓',
-            body: 'Permohonan ${leave.typeLabel} tanggal ${leave.startDate} telah disetujui oleh Bagian Kepegawaian.',
+            body: 'Permohonan ${leave.type} tanggal ${leave.startDate} telah disetujui oleh Bagian Kepegawaian.',
             type: 'approval',
             channelId: NotificationService.channelApprovals,
             notificationId: leave.id + 2000,
@@ -257,7 +263,7 @@ class SmartNotificationProvider extends ChangeNotifier {
         } else if (leave.status == 'REJECTED') {
           await addNotification(
             title: 'Pengajuan Cuti Ditolak',
-            body: 'Permohonan ${leave.typeLabel} tanggal ${leave.startDate} ditolak.',
+            body: 'Permohonan ${leave.type} tanggal ${leave.startDate} ditolak.',
             type: 'approval',
             channelId: NotificationService.channelApprovals,
             notificationId: leave.id + 2000,
