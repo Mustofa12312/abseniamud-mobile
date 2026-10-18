@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../core/theme/app_colors.dart';
 import '../providers/attendance_provider.dart';
 import '../providers/device_security_provider.dart';
 import 'dashboard_screen.dart';
@@ -59,6 +58,16 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
     });
   }
 
+  void _onTabSelected(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+    if (index == 1) {
+      // Trigger live GPS scanning when tapping Presensi
+      Provider.of<DeviceSecurityProvider>(context, listen: false).refreshLocation();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -71,72 +80,148 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
+              color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+              blurRadius: 20,
+              offset: const Offset(0, -6),
             ),
           ],
           border: const Border(
-            top: BorderSide(color: AppColors.borderLight, width: 0.8),
+            top: BorderSide(color: Color(0xFFF1F5F9), width: 1.2),
           ),
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-            child: BottomNavigationBar(
-              currentIndex: _currentIndex,
-              onTap: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
-                if (index == 1) {
-                  // Scanning GPS when tapping Presensi
-                  Provider.of<DeviceSecurityProvider>(context, listen: false).refreshLocation();
-                }
-              },
-              type: BottomNavigationBarType.fixed,
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              selectedItemColor: AppColors.brand600,
-              unselectedItemColor: AppColors.textSecondaryLight,
-              selectedLabelStyle: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.2,
-              ),
-              unselectedLabelStyle: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.dashboard_outlined),
-                  activeIcon: Icon(Icons.dashboard_rounded),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(
+                  index: 0,
+                  icon: Icons.dashboard_outlined,
+                  activeIcon: Icons.dashboard_rounded,
                   label: 'Beranda',
                 ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.fingerprint_rounded, size: 28),
-                  activeIcon: Icon(Icons.fingerprint_rounded, size: 28),
-                  label: 'Presensi',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.history_rounded),
-                  activeIcon: Icon(Icons.history_toggle_off_rounded),
+                _buildPresensiHeroItem(),
+                _buildNavItem(
+                  index: 2,
+                  icon: Icons.history_rounded,
+                  activeIcon: Icons.history_toggle_off_rounded,
                   label: 'Riwayat',
                 ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.calendar_today_outlined),
-                  activeIcon: Icon(Icons.calendar_month_rounded),
+                _buildNavItem(
+                  index: 3,
+                  icon: Icons.calendar_today_outlined,
+                  activeIcon: Icons.calendar_month_rounded,
                   label: 'Jadwal',
                 ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.person_outline_rounded),
-                  activeIcon: Icon(Icons.person_rounded),
+                _buildNavItem(
+                  index: 4,
+                  icon: Icons.person_outline_rounded,
+                  activeIcon: Icons.person_rounded,
                   label: 'Profil',
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+  }) {
+    final isSelected = _currentIndex == index;
+
+    return InkWell(
+      onTap: () => _onTabSelected(index),
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFECFDF5) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? activeIcon : icon,
+              size: 22,
+              color: isSelected ? const Color(0xFF047857) : const Color(0xFF94A3B8),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                color: isSelected ? const Color(0xFF047857) : const Color(0xFF64748B),
+                letterSpacing: 0.1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPresensiHeroItem() {
+    final isSelected = _currentIndex == 1;
+
+    return InkWell(
+      onTap: () => _onTabSelected(1),
+      borderRadius: BorderRadius.circular(18),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? const LinearGradient(
+                  colors: [Color(0xFF047857), Color(0xFF10B981)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isSelected ? null : const Color(0xFFF0FDF4),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSelected ? Colors.transparent : const Color(0xFFA7F3D0),
+            width: 1.2,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.fingerprint_rounded,
+              size: 24,
+              color: isSelected ? Colors.white : const Color(0xFF047857),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Presensi',
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w800,
+                color: isSelected ? Colors.white : const Color(0xFF047857),
+                letterSpacing: 0.2,
+              ),
+            ),
+          ],
         ),
       ),
     );
