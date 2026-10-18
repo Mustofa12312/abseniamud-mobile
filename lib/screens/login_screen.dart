@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/theme/app_colors.dart';
 import '../core/constants/api_constants.dart';
 import '../core/storage/secure_storage_service.dart';
+import '../core/network/api_client.dart';
 import '../providers/auth_provider.dart';
 import '../providers/device_security_provider.dart';
 import 'main_navigation_screen.dart';
