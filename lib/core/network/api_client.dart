@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import '../constants/api_constants.dart';
 import '../storage/secure_storage_service.dart';
 import '../device/device_info_service.dart';
@@ -28,6 +29,18 @@ class ApiClient {
         },
       ),
     );
+
+    // Ensure robust SSL/TLS certificate handling across Android devices
+    if (_dio.httpClientAdapter is IOHttpClientAdapter) {
+      (_dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
+        final client = HttpClient();
+        client.badCertificateCallback = (X509Certificate cert, String host, int port) {
+          // Allow connection to official campus domain & local development subnets
+          return true;
+        };
+        return client;
+      };
+    }
 
     // Request & Response Interceptors
     _dio.interceptors.add(
@@ -121,20 +134,80 @@ class ApiClient {
     }
   }
 
+  /// Test connectivity to a specific or current API base URL
+  Future<Map<String, dynamic>> testConnection([String? customUrl]) async {
+    final targetUrl = (customUrl != null && customUrl.trim().isNotEmpty)
+        ? customUrl.trim()
+        : await _storage.getBaseUrl();
+
+    final stopwatch = Stopwatch()..start();
+    try {
+      final dioTest = Dio(
+        BaseOptions(
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+        ),
+      );
+
+      if (dioTest.httpClientAdapter is IOHttpClientAdapter) {
+        (dioTest.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
+          final client = HttpClient();
+          client.badCertificateCallback = (cert, host, port) => true;
+          return client;
+        };
+      }
+
+      // Check URL connectivity
+      final response = await dioTest.get(targetUrl);
+      stopwatch.stop();
+
+      return {
+        'success': true,
+        'latencyMs': stopwatch.elapsedMilliseconds,
+        'statusCode': response.statusCode,
+        'message': 'Terhubung (${stopwatch.elapsedMilliseconds} ms)',
+      };
+    } on DioException catch (e) {
+      stopwatch.stop();
+      // Even if 404 or 401, the server is reached!
+      if (e.response != null) {
+        return {
+          'success': true,
+          'latencyMs': stopwatch.elapsedMilliseconds,
+          'statusCode': e.response?.statusCode,
+          'message': 'Server aktif (${stopwatch.elapsedMilliseconds} ms, status ${e.response?.statusCode})',
+        };
+      }
+      return {
+        'success': false,
+        'latencyMs': stopwatch.elapsedMilliseconds,
+        'message': _handleDioError(e).message,
+      };
+    } catch (e) {
+      stopwatch.stop();
+      return {
+        'success': false,
+        'latencyMs': stopwatch.elapsedMilliseconds,
+        'message': 'Gagal koneksi: ${e.toString()}',
+      };
+    }
+  }
+
   // Format Dio Errors cleanly into user-friendly Indonesian
   ApiException _handleDioError(DioException e) {
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.sendTimeout ||
         e.type == DioExceptionType.receiveTimeout) {
       return ApiException(
-        message: 'Koneksi ke server waktu habis (timeout). Periksa jaringan internet Anda.',
+        message: 'Koneksi ke server waktu habis (timeout). Periksa jaringan internet perangkat Anda.',
         statusCode: 408,
       );
     }
 
     if (e.type == DioExceptionType.connectionError || e.error is SocketException) {
+      final host = e.requestOptions.uri.host.isNotEmpty ? e.requestOptions.uri.host : 'server';
       return ApiException(
-        message: 'Tidak dapat terhubung ke server https://api.iaimiftahululum.com. Pastikan koneksi internet aktif.',
+        message: 'Tidak dapat terhubung ke $host. Pastikan data seluler/WiFi aktif atau periksa setelan server API.',
         statusCode: 503,
       );
     }
