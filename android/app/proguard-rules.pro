@@ -24,3 +24,6 @@
 # Suppress Play Store Split Install / Deferred Component warnings for R8
 -dontwarn com.google.android.play.core.**
 -dontwarn io.flutter.embedding.engine.deferredcomponents.**
+
+# flutter_local_notifications
+-keep class com.dexterous.flutterlocalnotifications.** { *; }
