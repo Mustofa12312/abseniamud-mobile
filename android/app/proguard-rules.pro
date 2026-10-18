@@ -20,3 +20,7 @@
 
 # Keep geolocator classes
 -keep class com.baseflow.geolocator.** { *; }
+
+# Suppress Play Store Split Install / Deferred Component warnings for R8
+-dontwarn com.google.android.play.core.**
+-dontwarn io.flutter.embedding.engine.deferredcomponents.**
