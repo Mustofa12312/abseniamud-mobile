@@ -191,7 +191,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
           Switch.adaptive(
             value: value,
-            activeColor: const Color(0xFF047857),
+            activeThumbColor: const Color(0xFF047857),
             onChanged: onChanged,
           ),
         ],
@@ -531,8 +531,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       onDismissed: (_) {
         final prov = Provider.of<SmartNotificationProvider>(context, listen: false);
-        prov.items.removeWhere((e) => e.id == item.id);
-        prov.notifyListeners();
+        prov.removeItem(item.id);
       },
       child: InkWell(
         onTap: () => _handleItemTap(item),

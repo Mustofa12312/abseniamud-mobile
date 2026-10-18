@@ -170,15 +170,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       backgroundColor: AppColors.backgroundLight,
       body: RefreshIndicator(
         onRefresh: () async {
-          await attProvider.refreshDashboard();
-          await schedProvider.fetchSchedules();
-          await devProvider.refreshLocation();
-          if (!mounted) return;
           final notifProv = Provider.of<SmartNotificationProvider>(context, listen: false);
           final leaveProv = Provider.of<LeaveProvider>(context, listen: false);
           final corrProv = Provider.of<CorrectionProvider>(context, listen: false);
+
+          await attProvider.refreshDashboard();
+          await schedProvider.fetchSchedules();
+          await devProvider.refreshLocation();
           await leaveProv.fetchLeaves();
           await corrProv.fetchCorrections();
+
+          if (!mounted) return;
           final todayName = _getDayName(_currentTime);
           final todaySchedules = schedProvider.getSchedulesForDay(todayName);
           await notifProv.checkScheduleReminders(todaySchedules);
