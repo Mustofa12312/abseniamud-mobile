@@ -11,6 +11,7 @@ import 'providers/attendance_provider.dart';
 import 'providers/schedule_provider.dart';
 import 'providers/correction_provider.dart';
 import 'providers/leave_provider.dart';
+import 'providers/notification_provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_navigation_screen.dart';
@@ -48,6 +49,7 @@ class IaimuAttendanceApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ScheduleProvider()),
         ChangeNotifierProvider(create: (_) => CorrectionProvider()),
         ChangeNotifierProvider(create: (_) => LeaveProvider()),
+        ChangeNotifierProvider(create: (_) => SmartNotificationProvider()),
       ],
       child: MaterialApp(
         title: 'IAIMU Presensi Mobile',

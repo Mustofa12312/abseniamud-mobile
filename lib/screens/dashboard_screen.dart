@@ -10,9 +10,13 @@ import '../providers/schedule_provider.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/mock_location_warning.dart';
 import '../data/models/announcement_model.dart';
+import '../providers/notification_provider.dart';
+import '../providers/leave_provider.dart';
+import '../providers/correction_provider.dart';
 import 'main_navigation_screen.dart';
 import 'leaves_screen.dart';
 import 'corrections_screen.dart';
+import 'notifications_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -37,8 +41,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ScheduleProvider>(context, listen: false).fetchSchedules();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final schedProv = Provider.of<ScheduleProvider>(context, listen: false);
+      final attProv = Provider.of<AttendanceProvider>(context, listen: false);
+      final devProv = Provider.of<DeviceSecurityProvider>(context, listen: false);
+      final notifProv = Provider.of<SmartNotificationProvider>(context, listen: false);
+      final leaveProv = Provider.of<LeaveProvider>(context, listen: false);
+      final corrProv = Provider.of<CorrectionProvider>(context, listen: false);
+
+      await notifProv.requestPermissions();
+      await schedProv.fetchSchedules();
+      await leaveProv.fetchLeaves();
+      await corrProv.fetchCorrections();
+
+      if (!mounted) return;
+      final todayName = _getDayName(_currentTime);
+      final todaySchedules = schedProv.getSchedulesForDay(todayName);
+      await notifProv.checkScheduleReminders(todaySchedules);
+      await notifProv.checkCheckOutReminder(attProv.todayStatus);
+      await notifProv.checkApprovalUpdates(leaveProv.leaves, corrProv.corrections);
+      await notifProv.checkAnnouncementAlerts(attProv.announcements);
+      if (devProv.isWithinGeofence && devProv.selectedCampus != null) {
+        await notifProv.checkGeofenceArrival(
+          true,
+          devProv.selectedCampus!.name,
+          attProv.todayStatus,
+        );
+      }
     });
   }
 
@@ -144,6 +173,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
           await attProvider.refreshDashboard();
           await schedProvider.fetchSchedules();
           await devProvider.refreshLocation();
+          if (!mounted) return;
+          final notifProv = Provider.of<SmartNotificationProvider>(context, listen: false);
+          final leaveProv = Provider.of<LeaveProvider>(context, listen: false);
+          final corrProv = Provider.of<CorrectionProvider>(context, listen: false);
+          await leaveProv.fetchLeaves();
+          await corrProv.fetchCorrections();
+          final todayName = _getDayName(_currentTime);
+          final todaySchedules = schedProvider.getSchedulesForDay(todayName);
+          await notifProv.checkScheduleReminders(todaySchedules);
+          await notifProv.checkCheckOutReminder(attProvider.todayStatus);
+          await notifProv.checkApprovalUpdates(leaveProv.leaves, corrProv.corrections);
+          await notifProv.checkAnnouncementAlerts(attProvider.announcements);
         },
         color: AppColors.brand600,
         child: SingleChildScrollView(
@@ -260,6 +301,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ],
                           ),
                         ),
+                        Consumer<SmartNotificationProvider>(
+                          builder: (context, notifProv, _) {
+                            return InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.16),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                                ),
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    const Icon(Icons.notifications_outlined, size: 18, color: Colors.white),
+                                    if (notifProv.unreadCount > 0)
+                                      Positioned(
+                                        top: -4,
+                                        right: -4,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(3),
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFDC2626),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                                          child: Center(
+                                            child: Text(
+                                              notifProv.unreadCount > 9 ? '9+' : notifProv.unreadCount.toString(),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 8.5,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 8),
                         InkWell(
                           onTap: () {
                             attProvider.refreshDashboard();
@@ -275,7 +367,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                             child: const Icon(Icons.sync_rounded, size: 18, color: Colors.white),
                           ),
-                        )
+                        ),
                       ],
                     ),
 
