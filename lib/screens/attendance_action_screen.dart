@@ -627,16 +627,23 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
 
             // Detected device subtitle
             if (meta != null) ...[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.smartphone_rounded, size: 14, color: AppColors.textSecondaryLight),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Perangkat: ${meta.displayName} • ID: ${meta.deviceFingerprint}',
-                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
-                  ),
-                ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.smartphone_rounded, size: 14, color: AppColors.textSecondaryLight),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'Perangkat: ${meta.displayName} • ID: ${meta.deviceFingerprint.length > 12 ? "${meta.deviceFingerprint.substring(0, 12)}..." : meta.deviceFingerprint}',
+                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
             const SizedBox(height: 20),
@@ -650,16 +657,20 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight)),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: valueColor ?? AppColors.textPrimaryLight,
-              fontFamily: isMonospace ? 'monospace' : null,
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: valueColor ?? AppColors.textPrimaryLight,
+                fontFamily: isMonospace ? 'monospace' : null,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
