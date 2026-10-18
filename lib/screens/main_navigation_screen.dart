@@ -80,18 +80,18 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF0F172A).withValues(alpha: 0.06),
-              blurRadius: 20,
-              offset: const Offset(0, -6),
+              color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+              blurRadius: 16,
+              offset: const Offset(0, -4),
             ),
           ],
           border: const Border(
-            top: BorderSide(color: Color(0xFFF1F5F9), width: 1.2),
+            top: BorderSide(color: Color(0xFFF1F5F9), width: 1),
           ),
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -101,7 +101,12 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                   activeIcon: Icons.dashboard_rounded,
                   label: 'Beranda',
                 ),
-                _buildPresensiHeroItem(),
+                _buildNavItem(
+                  index: 1,
+                  icon: Icons.fingerprint_rounded,
+                  activeIcon: Icons.fingerprint_rounded,
+                  label: 'Presensi',
+                ),
                 _buildNavItem(
                   index: 2,
                   icon: Icons.history_rounded,
@@ -141,7 +146,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFECFDF5) : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
@@ -162,63 +167,6 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                 color: isSelected ? const Color(0xFF047857) : const Color(0xFF64748B),
                 letterSpacing: 0.1,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPresensiHeroItem() {
-    final isSelected = _currentIndex == 1;
-
-    return InkWell(
-      onTap: () => _onTabSelected(1),
-      borderRadius: BorderRadius.circular(18),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          gradient: isSelected
-              ? const LinearGradient(
-                  colors: [Color(0xFF047857), Color(0xFF10B981)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: isSelected ? null : const Color(0xFFF0FDF4),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isSelected ? Colors.transparent : const Color(0xFFA7F3D0),
-            width: 1.2,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : null,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.fingerprint_rounded,
-              size: 24,
-              color: isSelected ? Colors.white : const Color(0xFF047857),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Presensi',
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w800,
-                color: isSelected ? Colors.white : const Color(0xFF047857),
-                letterSpacing: 0.2,
               ),
             ),
           ],
