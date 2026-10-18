@@ -31,7 +31,7 @@ class NotificationService {
 
     try {
       await _notificationsPlugin.initialize(
-        initSettings,
+        settings: initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) {
           debugPrint('Notification clicked with payload: ${response.payload}');
         },
@@ -143,10 +143,10 @@ class NotificationService {
 
     try {
       await _notificationsPlugin.show(
-        id,
-        title,
-        body,
-        platformDetails,
+        id: id,
+        title: title,
+        body: body,
+        notificationDetails: platformDetails,
         payload: payload,
       );
     } catch (e) {
@@ -156,7 +156,7 @@ class NotificationService {
 
   /// Cancel a specific notification
   Future<void> cancel(int id) async {
-    await _notificationsPlugin.cancel(id);
+    await _notificationsPlugin.cancel(id: id);
   }
 
   /// Cancel all active notifications
