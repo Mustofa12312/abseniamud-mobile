@@ -64,6 +64,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return days[date.weekday % 7];
   }
 
+  String _localizePeriod(String period) {
+    if (period.isEmpty) return 'Bulan Ini';
+    const enMonths = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const idMonths = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    String result = period;
+    for (int i = 0; i < enMonths.length; i++) {
+      result = result.replaceAll(enMonths[i], idMonths[i]);
+    }
+    return result;
+  }
+
   void _showAnnouncementModal(AnnouncementModel ann) {
     showDialog(
       context: context,
@@ -139,7 +156,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.only(top: 50, bottom: 24, left: 20, right: 20),
                 decoration: const BoxDecoration(
-                  gradient: AppColors.headerGradient,
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFF042412),
+                      Color(0xFF064E26),
+                      Color(0xFF14532D),
+                      Color(0xFF15803D),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   borderRadius: BorderRadius.only(
                     bottomLeft: Radius.circular(28),
                     bottomRight: Radius.circular(28),
@@ -158,14 +184,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.brand300, width: 1.5),
+                            border: Border.all(color: const Color(0xFFA7F3D0), width: 1.5),
                           ),
                           child: Image.asset(
                             'assets/images/logo.png',
                             fit: BoxFit.contain,
                             errorBuilder: (context, error, stackTrace) => const Icon(
                               Icons.school_rounded,
-                              color: AppColors.brand600,
+                              color: Color(0xFF047857),
                             ),
                           ),
                         ),
@@ -177,47 +203,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Text(
                                 user?.name ?? 'Civitas IAIMU',
                                 style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16.5,
+                                  fontWeight: FontWeight.w800,
                                   color: Colors.white,
+                                  letterSpacing: -0.2,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
+                              const SizedBox(height: 2),
                               Row(
                                 children: [
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: AppColors.brand800.withValues(alpha: 0.8),
-                                      borderRadius: BorderRadius.circular(4),
+                                      color: Colors.white.withValues(alpha: 0.18),
+                                      borderRadius: BorderRadius.circular(5),
                                     ),
                                     child: Text(
                                       (user?.roleName ?? 'Dosen').toUpperCase(),
                                       style: const TextStyle(
                                         fontSize: 9.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFFBBF7D0),
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFFD1FAE5),
                                         letterSpacing: 0.5,
                                       ),
                                     ),
                                   ),
                                   if (user?.lecturer?.nidn != null) ...[
                                     const SizedBox(width: 6),
-                                    Text(
-                                      'NIDN: ${user!.lecturer!.nidn}',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Color(0xFFBBF7D0),
+                                    Flexible(
+                                      child: Text(
+                                        'NIDN: ${user!.lecturer!.nidn}',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFFD1FAE5),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ] else if (user?.staffProfile?['nip'] != null) ...[
                                     const SizedBox(width: 6),
-                                    Text(
-                                      'NIP: ${user!.staffProfile!['nip']}',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Color(0xFFBBF7D0),
+                                    Flexible(
+                                      child: Text(
+                                        'NIP: ${user!.staffProfile!['nip']}',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFFD1FAE5),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ]
@@ -226,26 +260,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ],
                           ),
                         ),
-                        IconButton(
-                          onPressed: () {
+                        InkWell(
+                          onTap: () {
                             attProvider.refreshDashboard();
                             devProvider.refreshLocation();
                           },
-                          icon: const Icon(Icons.sync_rounded, color: Colors.white),
-                          tooltip: 'Segarkan',
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.16),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                            ),
+                            child: const Icon(Icons.sync_rounded, size: 18, color: Colors.white),
+                          ),
                         )
                       ],
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 18),
 
                     // Digital Clock & Date Container
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
+                        color: Colors.white.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -258,7 +300,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 style: const TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w500,
-                                  color: Color(0xFFDCFCE7),
+                                  color: Color(0xFFD1FAE5),
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -268,7 +310,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   fontSize: 22,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
-                                  letterSpacing: 0.8,
+                                  letterSpacing: 0.5,
                                 ),
                               ),
                             ],
@@ -276,20 +318,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: AppColors.brand500.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.brand400.withValues(alpha: 0.4)),
+                              color: Colors.white.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
                             ),
                             child: Row(
-                              children: const [
-                                Icon(Icons.radar_rounded, size: 14, color: Color(0xFF86EFAC)),
-                                SizedBox(width: 4),
-                                Text(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF4ADE80),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Text(
                                   'GPS Online',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF86EFAC),
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
                                   ),
                                 ),
                               ],
@@ -340,19 +390,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Rekap Presensi (${summary.period.isNotEmpty ? summary.period : "Bulan Ini"})',
+                          'Rekap Presensi (${_localizePeriod(summary.period)})',
                           style: const TextStyle(
                             fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimaryLight,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
+                            letterSpacing: -0.2,
                           ),
                         ),
                         Text(
                           'Total: ${summary.total}',
                           style: const TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondaryLight,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF64748B),
                           ),
                         ),
                       ],
@@ -366,8 +417,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             label: 'Hadir',
                             value: summary.hadir.toString(),
                             icon: Icons.check_circle_rounded,
-                            color: AppColors.statusHadir,
-                            bgColor: AppColors.brand50,
+                            color: const Color(0xFF047857),
+                            bgColor: const Color(0xFFF0FDF4),
+                            borderColor: const Color(0xFFA7F3D0),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -376,8 +428,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             label: 'Terlambat',
                             value: summary.terlambat.toString(),
                             icon: Icons.access_time_filled_rounded,
-                            color: AppColors.statusTerlambat,
-                            bgColor: const Color(0xFFFFF7ED),
+                            color: const Color(0xFFD97706),
+                            bgColor: const Color(0xFFFFFBEB),
+                            borderColor: const Color(0xFFFDE68A),
                           ),
                         ),
                       ],
@@ -390,8 +443,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             label: 'Izin / Sakit',
                             value: summary.izinSakit.toString(),
                             icon: Icons.info_rounded,
-                            color: AppColors.statusIzin,
+                            color: const Color(0xFF0284C7),
                             bgColor: const Color(0xFFF0F9FF),
+                            borderColor: const Color(0xFFBAE6FD),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -400,13 +454,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             label: 'Tanpa Keterangan',
                             value: summary.tidakHadir.toString(),
                             icon: Icons.cancel_rounded,
-                            color: AppColors.statusAlpha,
-                            bgColor: const Color(0xFFFEF2F2),
+                            color: const Color(0xFFE11D48),
+                            bgColor: const Color(0xFFFFF1F2),
+                            borderColor: const Color(0xFFFECDD3),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
 
                     // Quick Action Row (Izin & Koreksi)
                     Row(
@@ -416,13 +471,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             onPressed: () {
                               Navigator.push(context, MaterialPageRoute(builder: (_) => const LeavesScreen()));
                             },
-                            icon: const Icon(Icons.assignment_turned_in_rounded, size: 16, color: AppColors.brand700),
-                            label: const Text('Ajukan Izin / Cuti', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.brand800)),
+                            icon: const Icon(Icons.assignment_turned_in_rounded, size: 16, color: Color(0xFF047857)),
+                            label: const Text(
+                              'Ajukan Izin / Cuti',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF064E26)),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                             style: OutlinedButton.styleFrom(
                               backgroundColor: Colors.white,
-                              side: const BorderSide(color: AppColors.brand200),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              side: const BorderSide(color: Color(0xFFA7F3D0)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                           ),
                         ),
@@ -433,12 +492,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Navigator.push(context, MaterialPageRoute(builder: (_) => const CorrectionsScreen()));
                             },
                             icon: const Icon(Icons.edit_calendar_rounded, size: 16, color: Color(0xFFB45309)),
-                            label: const Text('Koreksi Presensi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF9A3412))),
+                            label: const Text(
+                              'Koreksi Presensi',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF9A3412)),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                             style: OutlinedButton.styleFrom(
                               backgroundColor: Colors.white,
                               side: const BorderSide(color: Color(0xFFFED7AA)),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                           ),
                         ),
@@ -838,16 +901,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
-                    height: 44,
+                    height: 48,
                     child: ElevatedButton.icon(
                       onPressed: () {
                         final nav = MainNavigationScreen.of(context);
                         nav?.switchTab(1); // Switch to Presensi
                       },
-                      icon: const Icon(Icons.logout_rounded),
-                      label: const Text('Lakukan Presensi Pulang (Check-out)'),
+                      icon: const Icon(Icons.logout_rounded, size: 18),
+                      label: const Text(
+                        'Presensi Pulang (Check-Out)',
+                        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1E293B),
+                        backgroundColor: const Color(0xFF0F172A),
+                        foregroundColor: Colors.white,
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                     ),
                   ),
@@ -948,62 +1018,90 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // SECURITY STATUS PILL
+  // SECURITY STATUS PILL
   Widget _buildSecurityPill(DeviceSecurityProvider devProvider) {
     final meta = devProvider.deviceMetadata;
+    final isMock = devProvider.isMockDetected;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderLight),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isMock ? const Color(0xFFFCA5A5) : const Color(0xFFE2E8F0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          const Icon(Icons.security_rounded, size: 20, color: AppColors.brand700),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: isMock ? const Color(0xFFFEE2E2) : const Color(0xFFECFDF5),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isMock ? Icons.gpp_bad_rounded : Icons.verified_user_rounded,
+              size: 18,
+              color: isMock ? Colors.red.shade700 : const Color(0xFF047857),
+            ),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  meta != null ? 'Perangkat: ${meta.displayName}' : 'Perangkat Terlindungi',
+                  meta != null ? 'Perangkat: ${meta.displayName}' : 'Perangkat Terverifikasi',
                   style: const TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimaryLight,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 1),
                 Text(
-                  devProvider.isMockDetected
+                  isMock
                       ? '⚠️ Peringatan: Mock Location / Fake GPS Aktif'
                       : '✓ Anti-Fake GPS Aktif • Device Valid',
                   style: TextStyle(
                     fontSize: 10.5,
-                    fontWeight: FontWeight.w500,
-                    color: devProvider.isMockDetected ? Colors.red : AppColors.brand700,
+                    fontWeight: FontWeight.w600,
+                    color: isMock ? Colors.red.shade700 : const Color(0xFF047857),
                   ),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
             decoration: BoxDecoration(
-              color: devProvider.isMockDetected ? const Color(0xFFFEE2E2) : AppColors.brand100,
-              borderRadius: BorderRadius.circular(4),
+              color: isMock ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isMock ? const Color(0xFFFCA5A5) : const Color(0xFF86EFAC),
+              ),
             ),
             child: Text(
-              devProvider.isMockDetected ? 'ALERT' : 'AMAN',
+              isMock ? 'ALERT' : 'AMAN',
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
-                color: devProvider.isMockDetected ? Colors.red : AppColors.brand800,
+                color: isMock ? Colors.red.shade800 : const Color(0xFF15803D),
+                letterSpacing: 0.5,
               ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -1016,13 +1114,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required IconData icon,
     required Color color,
     required Color bgColor,
+    Color? borderColor,
   }) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor ?? color.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -1030,31 +1136,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: color,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                    letterSpacing: -0.3,
+                  ),
                 ),
-              ),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondaryLight,
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF475569),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
