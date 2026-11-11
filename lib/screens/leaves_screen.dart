@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -221,7 +222,49 @@ class _AddLeaveBottomSheetState extends State<_AddLeaveBottomSheet> {
   DateTime _endDate = DateTime.now();
   String _selectedType = 'Izin';
   String? _submitError;
+  PlatformFile? _selectedFile;
+  int? _selectedFileSize;
+  List<int>? _selectedFileBytes;
   static const List<String> _leaveTypes = ['Izin', 'Sakit', 'Cuti'];
+
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(2)} MB';
+  }
+
+  Future<void> _pickAttachment() async {
+    try {
+      final picked = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: LeaveProvider.allowedAttachmentExtensions,
+      );
+      if (picked == null || !mounted) return;
+
+      final sizeBytes = await picked.length();
+      final error = LeaveProvider.validateAttachment(
+        fileName: picked.name,
+        sizeBytes: sizeBytes,
+      );
+      if (error != null) {
+        if (!mounted) return;
+        setState(() => _submitError = error);
+        return;
+      }
+
+      final fileBytes = picked.path == null ? await picked.readAsBytes() : null;
+      if (!mounted) return;
+      setState(() {
+        _submitError = null;
+        _selectedFile = picked;
+        _selectedFileSize = sizeBytes;
+        _selectedFileBytes = fileBytes;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _submitError = 'Gagal membuka pemilih berkas.');
+    }
+  }
 
   @override
   void dispose() {
@@ -402,7 +445,61 @@ class _AddLeaveBottomSheetState extends State<_AddLeaveBottomSheet> {
               ),
               const SizedBox(height: 14),
 
-              const Text('Nomor Surat / Link Dokumen Pendukung (Opsional)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+              const Text('Lampiran Surat / Foto Bukti (PDF, JPG, PNG • Maks. 5 MB)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              if (_selectedFile != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.brand50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.brand600.withValues(alpha: 0.35)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.insert_drive_file_rounded, size: 20, color: AppColors.brand700),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _selectedFile!.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.brand800),
+                            ),
+                            Text(
+                              _formatFileSize(_selectedFileSize ?? 0),
+                              style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => setState(() {
+                          _selectedFile = null;
+                          _selectedFileSize = null;
+                          _selectedFileBytes = null;
+                        }),
+                        icon: const Icon(Icons.close_rounded, size: 18),
+                        tooltip: 'Hapus lampiran',
+                      ),
+                    ],
+                  ),
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _pickAttachment,
+                    icon: const Icon(Icons.upload_file_rounded, size: 18),
+                    label: const Text('Pilih File Surat / Foto (PDF, JPG, PNG)'),
+                  ),
+                ),
+              const SizedBox(height: 12),
+
+              const Text('Atau Nomor Surat / Link Dokumen (Opsional)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _docController,
@@ -425,12 +522,17 @@ class _AddLeaveBottomSheetState extends State<_AddLeaveBottomSheet> {
                               if (!_formKey.currentState!.validate()) return;
                               setState(() => _submitError = null);
                               final docText = _docController.text.trim();
+                              final pickedFile = _selectedFile;
+                              final pickedBytes = _selectedFileBytes;
                               final result = await provider.submitLeave(
                                 type: _selectedType,
                                 startDate: DateFormat('yyyy-MM-dd').format(_startDate),
                                 endDate: DateFormat('yyyy-MM-dd').format(_endDate),
                                 reason: _reasonController.text.trim(),
                                 documentPath: docText.isNotEmpty ? docText : null,
+                                documentFilePath: pickedFile?.path,
+                                documentFileName: pickedFile?.name,
+                                documentBytes: pickedBytes,
                               );
 
                               if (!mounted) return;
