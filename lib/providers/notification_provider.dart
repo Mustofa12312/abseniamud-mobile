@@ -31,6 +31,7 @@ class SmartNotificationProvider extends ChangeNotifier {
   int get unreadCount => _items.where((e) => !e.isRead).length;
 
   bool _isLoaded = false;
+  int _idCounter = 0;
 
   SmartNotificationProvider() {
     _init();
@@ -119,7 +120,7 @@ class SmartNotificationProvider extends ChangeNotifier {
     int? notificationId,
   }) async {
     final notifItem = NotificationItemModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: '${DateTime.now().microsecondsSinceEpoch}_${_idCounter++}',
       title: title,
       body: body,
       type: type,
@@ -241,6 +242,12 @@ class SmartNotificationProvider extends ChangeNotifier {
     _savePreferences();
   }
 
+  Future<void> clearUserData() async {
+    _items.clear();
+    notifyListeners();
+    await _savePreferences();
+  }
+
   // ─── TRIGGER 3: APPROVAL STATUS UPDATES (LEAVES & CORRECTIONS) ───
   Future<void> checkApprovalUpdates(List<LeaveModel> leaves, List<AttendanceCorrectionModel> corrections) async {
     if (!_approvalAlertsEnabled) return;
@@ -254,18 +261,20 @@ class SmartNotificationProvider extends ChangeNotifier {
       if (prevStatus != null && prevStatus != leave.status) {
         if (leave.status == 'APPROVED') {
           await addNotification(
-            title: 'Pengajuan Cuti Disetujui ✓',
+            title: 'Pengajuan ${leave.type} Disetujui ✓',
             body: 'Permohonan ${leave.type} tanggal ${leave.startDate} telah disetujui oleh Bagian Kepegawaian.',
             type: 'approval',
             channelId: NotificationService.channelApprovals,
+            payload: 'leave',
             notificationId: leave.id + 2000,
           );
         } else if (leave.status == 'REJECTED') {
           await addNotification(
-            title: 'Pengajuan Cuti Ditolak',
+            title: 'Pengajuan ${leave.type} Ditolak',
             body: 'Permohonan ${leave.type} tanggal ${leave.startDate} ditolak.',
             type: 'approval',
             channelId: NotificationService.channelApprovals,
+            payload: 'leave',
             notificationId: leave.id + 2000,
           );
         }
@@ -285,6 +294,7 @@ class SmartNotificationProvider extends ChangeNotifier {
             body: 'Koreksi presensi tanggal ${corr.date} berhasil diverifikasi dan disetujui.',
             type: 'approval',
             channelId: NotificationService.channelApprovals,
+            payload: 'correction',
             notificationId: corr.id + 4000,
           );
         } else if (corr.status == 'REJECTED') {
@@ -293,6 +303,7 @@ class SmartNotificationProvider extends ChangeNotifier {
             body: 'Koreksi presensi tanggal ${corr.date} ditolak oleh verifikator.',
             type: 'approval',
             channelId: NotificationService.channelApprovals,
+            payload: 'correction',
             notificationId: corr.id + 4000,
           );
         }
@@ -329,7 +340,7 @@ class SmartNotificationProvider extends ChangeNotifier {
   // ─── TRIGGER 5: GEOFENCE ARRIVAL ALERT ───
   Future<void> checkGeofenceArrival(bool isWithinGeofence, String campusName, AttendanceTodayModel? today) async {
     if (!_geofenceAlertsEnabled) return;
-    if (!isWithinGeofence || (today != null && today.isCheckedIn)) return;
+    if (!isWithinGeofence || (today != null && !today.isNotCheckedIn)) return;
 
     final todayKey = _getTodayDateKey();
     final prefs = await SharedPreferences.getInstance();

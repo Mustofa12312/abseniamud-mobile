@@ -20,14 +20,17 @@ class StatusBadge extends StatelessWidget {
     IconData icon;
     String label = status;
 
-    switch (status.toUpperCase()) {
+    final normalized = status.trim().toUpperCase();
+    switch (normalized) {
       case 'HADIR':
       case 'APPROVED':
       case 'VALID':
         bgColor = AppColors.brand100;
         textColor = AppColors.brand800;
         icon = Icons.check_circle_rounded;
-        label = status == 'APPROVED' ? 'Disetujui' : 'Hadir';
+        label = normalized == 'APPROVED'
+            ? 'Disetujui'
+            : (normalized == 'VALID' ? 'Valid' : 'Hadir');
         break;
 
       case 'TERLAMBAT':
@@ -43,6 +46,9 @@ class StatusBadge extends StatelessWidget {
         bgColor = const Color(0xFFE0F2FE);
         textColor = const Color(0xFF0369A1);
         icon = Icons.info_rounded;
+        label = normalized == 'SAKIT'
+            ? 'Sakit'
+            : (normalized == 'CUTI' ? 'Cuti' : 'Izin');
         break;
 
       case 'TIDAK_HADIR':
@@ -51,7 +57,7 @@ class StatusBadge extends StatelessWidget {
         bgColor = const Color(0xFFFEE2E2);
         textColor = const Color(0xFFB91C1C);
         icon = Icons.cancel_rounded;
-        label = status == 'REJECTED' ? 'Ditolak' : 'Tidak Hadir';
+        label = normalized == 'REJECTED' ? 'Ditolak' : 'Tidak Hadir';
         break;
 
       case 'PENDING':

@@ -16,9 +16,21 @@ class LeaveProvider extends ChangeNotifier {
   bool _isSubmitting = false;
   bool get isSubmitting => _isSubmitting;
 
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
+  void clear() {
+    _leaves = [];
+    _errorMessage = null;
+    _isLoading = false;
+    _isSubmitting = false;
+    notifyListeners();
+  }
+
   /// Fetch user leave requests
   Future<void> fetchLeaves() async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
@@ -30,7 +42,11 @@ class LeaveProvider extends ChangeNotifier {
             .map((item) => LeaveModel.fromJson(Map<String, dynamic>.from(item)))
             .toList();
       }
-    } catch (_) {}
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+    } catch (_) {
+      _errorMessage = 'Gagal memuat daftar pengajuan izin & cuti.';
+    }
 
     _isLoading = false;
     notifyListeners();
@@ -66,6 +82,7 @@ class LeaveProvider extends ChangeNotifier {
           'message': response['message'] ?? 'Pengajuan berhasil dikirim dan menunggu persetujuan.',
         };
       } else {
+        notifyListeners();
         return {
           'success': false,
           'message': response?['message'] ?? 'Gagal mengirim pengajuan.',

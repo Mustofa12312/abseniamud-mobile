@@ -16,9 +16,21 @@ class CorrectionProvider extends ChangeNotifier {
   bool _isSubmitting = false;
   bool get isSubmitting => _isSubmitting;
 
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
+  void clear() {
+    _corrections = [];
+    _errorMessage = null;
+    _isLoading = false;
+    _isSubmitting = false;
+    notifyListeners();
+  }
+
   /// Fetch user corrections
   Future<void> fetchCorrections() async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
@@ -33,7 +45,11 @@ class CorrectionProvider extends ChangeNotifier {
             .map((item) => AttendanceCorrectionModel.fromJson(Map<String, dynamic>.from(item)))
             .toList();
       }
-    } catch (_) {}
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+    } catch (_) {
+      _errorMessage = 'Gagal memuat pengajuan koreksi presensi.';
+    }
 
     _isLoading = false;
     notifyListeners();
@@ -65,6 +81,7 @@ class CorrectionProvider extends ChangeNotifier {
           'message': response['message'] ?? 'Pengajuan koreksi presensi berhasil dikirim.',
         };
       } else {
+        notifyListeners();
         return {
           'success': false,
           'message': response?['message'] ?? 'Gagal mengirim pengajuan koreksi.',

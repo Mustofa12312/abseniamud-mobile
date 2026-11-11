@@ -20,6 +20,14 @@ class AttendanceProvider extends ChangeNotifier {
   // Campus Locations
   List<CampusLocationModel> _campusLocations = [];
   List<CampusLocationModel> get campusLocations => _campusLocations;
+  String? _locationsError;
+  String? get locationsError => _locationsError;
+
+  // Today / History errors
+  String? _todayError;
+  String? get todayError => _todayError;
+  String? _historyError;
+  String? get historyError => _historyError;
 
   // History
   List<AttendanceHistoryItem> _historyList = [];
@@ -44,6 +52,24 @@ class AttendanceProvider extends ChangeNotifier {
   String? _actionMessage;
   String? get actionMessage => _actionMessage;
 
+  /// Clears user-specific cached attendance state (used on logout/account switch).
+  void clear() {
+    _todayStatus = null;
+    _campusLocations = [];
+    _historyList = [];
+    _summary = AttendanceSummaryModel.empty();
+    _announcements = [];
+    _locationsError = null;
+    _todayError = null;
+    _historyError = null;
+    _actionMessage = null;
+    _isLoadingToday = false;
+    _isLoadingHistory = false;
+    _isLoadingSummary = false;
+    _isSubmitting = false;
+    notifyListeners();
+  }
+
   /// Fetch all initial dashboard data
   Future<void> refreshDashboard() async {
     await Future.wait([
@@ -57,14 +83,21 @@ class AttendanceProvider extends ChangeNotifier {
   /// Get today's attendance status
   Future<void> fetchTodayStatus() async {
     _isLoadingToday = true;
+    _todayError = null;
     notifyListeners();
 
     try {
       final response = await _apiClient.get(ApiConstants.attendanceToday);
       if (response != null && response['success'] == true && response['data'] is Map) {
         _todayStatus = AttendanceTodayModel.fromJson(Map<String, dynamic>.from(response['data'] as Map));
+      } else if (response != null && response['message'] != null) {
+        _todayError = response['message'].toString();
       }
-    } catch (_) {}
+    } on ApiException catch (e) {
+      _todayError = e.message;
+    } catch (_) {
+      _todayError = 'Gagal memuat status presensi hari ini.';
+    }
 
     _isLoadingToday = false;
     notifyListeners();
@@ -72,6 +105,7 @@ class AttendanceProvider extends ChangeNotifier {
 
   /// Get campus locations
   Future<List<CampusLocationModel>> fetchCampusLocations() async {
+    _locationsError = null;
     try {
       final response = await _apiClient.get(ApiConstants.locations);
       if (response != null && response['data'] is List) {
@@ -83,22 +117,12 @@ class AttendanceProvider extends ChangeNotifier {
             .toList();
         notifyListeners();
       }
+    } on ApiException catch (e) {
+      _locationsError = e.message;
+      notifyListeners();
     } catch (_) {
-      // Fallback default IAIMU campus if network error
-      if (_campusLocations.isEmpty) {
-        _campusLocations = [
-          CampusLocationModel(
-            id: 1,
-            name: 'Gedung Utama IAIMU',
-            latitude: -7.166316,
-            longitude: 113.483162,
-            radius: 75.0,
-            maxAccuracy: 50.0,
-            isActive: true,
-          )
-        ];
-        notifyListeners();
-      }
+      _locationsError = 'Gagal memuat titik koordinat kampus dari server.';
+      notifyListeners();
     }
     return _campusLocations;
   }
@@ -106,6 +130,7 @@ class AttendanceProvider extends ChangeNotifier {
   /// Get attendance history
   Future<void> fetchHistory({int? month, int? year}) async {
     _isLoadingHistory = true;
+    _historyError = null;
     notifyListeners();
 
     try {
@@ -127,7 +152,11 @@ class AttendanceProvider extends ChangeNotifier {
             .map((item) => AttendanceHistoryItem.fromJson(Map<String, dynamic>.from(item)))
             .toList();
       }
-    } catch (_) {}
+    } on ApiException catch (e) {
+      _historyError = e.message;
+    } catch (_) {
+      _historyError = 'Gagal memuat riwayat presensi.';
+    }
 
     _isLoadingHistory = false;
     notifyListeners();
@@ -203,6 +232,7 @@ class AttendanceProvider extends ChangeNotifier {
           'data': response['data'],
         };
       } else {
+        notifyListeners();
         return {
           'success': false,
           'message': response?['message'] ?? 'Gagal melakukan check-in.',
@@ -224,6 +254,7 @@ class AttendanceProvider extends ChangeNotifier {
     required double latitude,
     required double longitude,
     required double accuracy,
+    int? locationId,
   }) async {
     _isSubmitting = true;
     _actionMessage = null;
@@ -234,6 +265,7 @@ class AttendanceProvider extends ChangeNotifier {
         'latitude': latitude,
         'longitude': longitude,
         'accuracy': accuracy,
+        'location_id': ?locationId,
       };
 
       final response = await _apiClient.post(ApiConstants.checkOut, data: payload);
@@ -248,6 +280,7 @@ class AttendanceProvider extends ChangeNotifier {
           'data': response['data'],
         };
       } else {
+        notifyListeners();
         return {
           'success': false,
           'message': response?['message'] ?? 'Gagal melakukan check-out.',

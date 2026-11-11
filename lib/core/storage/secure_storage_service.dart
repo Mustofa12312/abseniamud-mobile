@@ -12,23 +12,40 @@ class SecureStorageService {
     aOptions: AndroidOptions(resetOnError: true),
   );
 
+  // In-memory session fallback when user chooses not to persist login across restarts
+  String? _sessionToken;
+  Map<String, dynamic>? _sessionUser;
+
   // Auth Token
-  Future<void> saveToken(String token) async {
-    await _secureStorage.write(key: ApiConstants.keyToken, value: token);
-    // Cleanup any legacy plaintext token in shared preferences
+  Future<void> saveToken(String token, {bool persist = true}) async {
+    _sessionToken = token;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(ApiConstants.keyToken);
+    if (persist) {
+      await _secureStorage.write(key: ApiConstants.keyToken, value: token);
+    } else {
+      try {
+        await _secureStorage.delete(key: ApiConstants.keyToken);
+      } catch (_) {}
+    }
   }
 
   Future<String?> getToken() async {
+    if (_sessionToken != null && _sessionToken!.isNotEmpty) {
+      return _sessionToken;
+    }
     try {
       final token = await _secureStorage.read(key: ApiConstants.keyToken);
-      if (token != null && token.isNotEmpty) return token;
+      if (token != null && token.isNotEmpty) {
+        _sessionToken = token;
+        return token;
+      }
     } catch (_) {}
     // Migration fallback: check legacy shared preferences once, migrate & delete
     final prefs = await SharedPreferences.getInstance();
     final legacyToken = prefs.getString(ApiConstants.keyToken);
     if (legacyToken != null && legacyToken.isNotEmpty) {
+      _sessionToken = legacyToken;
       await _secureStorage.write(key: ApiConstants.keyToken, value: legacyToken);
       await prefs.remove(ApiConstants.keyToken);
       return legacyToken;
@@ -37,6 +54,7 @@ class SecureStorageService {
   }
 
   Future<void> deleteToken() async {
+    _sessionToken = null;
     try {
       await _secureStorage.delete(key: ApiConstants.keyToken);
     } catch (_) {}
@@ -45,20 +63,30 @@ class SecureStorageService {
   }
 
   // Cached User Data
-  Future<void> saveUser(Map<String, dynamic> userData) async {
-    final jsonStr = jsonEncode(userData);
+  Future<void> saveUser(Map<String, dynamic> userData, {bool persist = true}) async {
+    _sessionUser = Map<String, dynamic>.from(userData);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(ApiConstants.keyUser, jsonStr);
+    if (persist) {
+      final jsonStr = jsonEncode(userData);
+      await prefs.setString(ApiConstants.keyUser, jsonStr);
+    } else {
+      await prefs.remove(ApiConstants.keyUser);
+    }
   }
 
   Future<Map<String, dynamic>?> getUser() async {
+    if (_sessionUser != null) {
+      return Map<String, dynamic>.from(_sessionUser!);
+    }
     final prefs = await SharedPreferences.getInstance();
     final jsonStr = prefs.getString(ApiConstants.keyUser);
     if (jsonStr != null && jsonStr.isNotEmpty) {
       try {
         final decoded = jsonDecode(jsonStr);
         if (decoded is Map) {
-          return Map<String, dynamic>.from(decoded);
+          final map = Map<String, dynamic>.from(decoded);
+          _sessionUser = map;
+          return map;
         }
         return null;
       } catch (_) {
@@ -69,8 +97,29 @@ class SecureStorageService {
   }
 
   Future<void> deleteUser() async {
+    _sessionUser = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(ApiConstants.keyUser);
+  }
+
+  // Remembered Login Identifier (email/username only, never password)
+  Future<void> saveRememberedEmail(String? email) async {
+    final prefs = await SharedPreferences.getInstance();
+    final trimmed = email?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      await prefs.remove(ApiConstants.keyRememberedEmail);
+    } else {
+      await prefs.setString(ApiConstants.keyRememberedEmail, trimmed);
+    }
+  }
+
+  Future<String?> getRememberedEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(ApiConstants.keyRememberedEmail);
+    if (saved != null && saved.trim().isNotEmpty) {
+      return saved.trim();
+    }
+    return null;
   }
 
   // Custom Base URL

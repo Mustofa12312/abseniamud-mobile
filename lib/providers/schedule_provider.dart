@@ -52,6 +52,21 @@ class ScheduleProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clears cached user schedules on logout/account switch.
+  void clear() {
+    _schedulesByDay = {
+      'Senin': [],
+      'Selasa': [],
+      'Rabu': [],
+      'Kamis': [],
+      'Jumat': [],
+      'Sabtu': [],
+      'Minggu': [],
+    };
+    _isLoading = false;
+    notifyListeners();
+  }
+
   /// Get schedules for today's day name in Indonesian
   List<ScheduleItem> getSchedulesForDay(String dayName) {
     return _schedulesByDay[dayName] ?? [];

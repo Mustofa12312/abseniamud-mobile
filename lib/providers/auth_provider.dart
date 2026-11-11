@@ -26,8 +26,8 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _status == AuthStatus.authenticated && _currentUser != null;
 
   AuthProvider() {
-    _apiClient.onSessionExpired = () {
-      logout(expired: true);
+    _apiClient.onSessionExpired = () async {
+      await logout(expired: true);
       NavigationService.navigateToLogin(reason: 'Sesi Anda telah berakhir. Silakan login kembali.');
     };
   }
@@ -37,9 +37,11 @@ class AuthProvider extends ChangeNotifier {
     _status = AuthStatus.loading;
     notifyListeners();
 
+    String? token;
     try {
-      final token = await _storage.getToken();
+      token = await _storage.getToken();
       if (token == null || token.isEmpty) {
+        _currentUser = null;
         _status = AuthStatus.unauthenticated;
         notifyListeners();
         return;
@@ -51,13 +53,31 @@ class AuthProvider extends ChangeNotifier {
         _currentUser = UserModel.fromJson(Map<String, dynamic>.from(response['data'] as Map));
         await _storage.saveUser(_currentUser!.toJson());
         _status = AuthStatus.authenticated;
+        _errorMessage = null;
+        notifyListeners();
+        return;
+      }
+    } on ApiException catch (e) {
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        await _storage.clearSession();
+        _currentUser = null;
+        _errorMessage = e.message;
+        _status = AuthStatus.unauthenticated;
+        notifyListeners();
+        return;
+      }
+      // Transient/offline network error: fall back to cached user only while token is intact
+      final cachedUser = await _storage.getUser();
+      if (token != null && token.isNotEmpty && cachedUser != null) {
+        _currentUser = UserModel.fromJson(cachedUser);
+        _status = AuthStatus.authenticated;
         notifyListeners();
         return;
       }
     } catch (_) {
-      // Check cached user as fallback if offline
+      // Transient offline fallback
       final cachedUser = await _storage.getUser();
-      if (cachedUser != null) {
+      if (token != null && token.isNotEmpty && cachedUser != null) {
         _currentUser = UserModel.fromJson(cachedUser);
         _status = AuthStatus.authenticated;
         notifyListeners();
@@ -65,12 +85,13 @@ class AuthProvider extends ChangeNotifier {
       }
     }
 
+    _currentUser = null;
     _status = AuthStatus.unauthenticated;
     notifyListeners();
   }
 
   /// Login with email/username and password
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(String email, String password, {bool rememberMe = true}) async {
     _status = AuthStatus.loading;
     _errorMessage = null;
     notifyListeners();
@@ -90,14 +111,21 @@ class AuthProvider extends ChangeNotifier {
       if (response != null && response['success'] == true && response['data'] is Map) {
         final data = Map<String, dynamic>.from(response['data'] as Map);
         final token = data['token']?.toString() ?? '';
+        if (token.isEmpty) {
+          throw ApiException(message: 'Token autentikasi tidak diterima dari server.');
+        }
+
         final userData = data['user'] is Map
             ? Map<String, dynamic>.from(data['user'] as Map)
             : <String, dynamic>{};
 
-        await _storage.saveToken(token);
+        await _storage.saveToken(token, persist: rememberMe);
         _currentUser = UserModel.fromJson(userData);
-        await _storage.saveUser(_currentUser!.toJson());
+        await _storage.saveUser(_currentUser!.toJson(), persist: rememberMe);
+        await _storage.saveRememberedEmail(rememberMe ? email.trim() : null);
 
+        _apiClient.resetSessionExpiredGuard();
+        NavigationService.resetLoginRedirectGuard();
         _status = AuthStatus.authenticated;
         _errorMessage = null;
         notifyListeners();

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
+import 'package:flutter/foundation.dart';
 import '../constants/api_constants.dart';
 import '../storage/secure_storage_service.dart';
 import '../device/device_info_service.dart';
@@ -11,13 +12,89 @@ class ApiClient {
   factory ApiClient() => _instance;
   ApiClient._internal();
 
-  late final Dio _dio;
+  late Dio _dio;
+  bool _isInitialized = false;
+  bool _isHandlingSessionExpired = false;
+
   final SecureStorageService _storage = SecureStorageService();
   final DeviceInfoService _deviceInfo = DeviceInfoService();
 
   Function()? onSessionExpired;
 
+  Dio get _client {
+    if (!_isInitialized) {
+      init();
+    }
+    return _dio;
+  }
+
+  /// Checks whether [host] points to a local loopback or RFC-1918 private network address.
+  static bool isLocalOrPrivateHost(String host) {
+    final normalized = host.trim().toLowerCase().replaceAll('[', '').replaceAll(']', '');
+    if (normalized.isEmpty) return false;
+    if (normalized == 'localhost' ||
+        normalized == '127.0.0.1' ||
+        normalized == '::1' ||
+        normalized == '10.0.2.2' ||
+        normalized == '10.0.3.2' ||
+        normalized.endsWith('.local') ||
+        normalized.endsWith('.test')) {
+      return true;
+    }
+
+    final parts = normalized.split('.');
+    if (parts.length == 4) {
+      final octets = parts.map(int.tryParse).toList();
+      if (octets.every((o) => o != null && o >= 0 && o <= 255)) {
+        final a = octets[0]!;
+        final b = octets[1]!;
+        if (a == 10 || a == 127) return true;
+        if (a == 192 && b == 168) return true;
+        if (a == 172 && b >= 16 && b <= 31) return true;
+      }
+    }
+    return false;
+  }
+
+  /// Never bypass TLS certificate validation in release builds or for public hosts.
+  static bool shouldAllowBadCertificate(String host, {bool isDebug = kDebugMode}) {
+    if (!isDebug) return false;
+    return isLocalOrPrivateHost(host);
+  }
+
+  /// Removes trailing slashes and surrounding whitespace from a server URL.
+  static String normalizeServerUrl(String rawUrl) {
+    return rawUrl.trim().replaceAll(RegExp(r'/+$'), '');
+  }
+
+  /// Validates server endpoint format and transport security policy.
+  static String? validateServerUrl(String rawUrl, {bool isDebug = kDebugMode}) {
+    final normalized = normalizeServerUrl(rawUrl);
+    if (normalized.isEmpty) {
+      return 'URL server tidak boleh kosong.';
+    }
+    final uri = Uri.tryParse(normalized);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+      return 'Format URL tidak valid. Gunakan awalan https:// (misal https://api.iaimiftahululum.com/api).';
+    }
+    final scheme = uri.scheme.toLowerCase();
+    if (scheme != 'http' && scheme != 'https') {
+      return 'Protokol URL harus https:// atau http://.';
+    }
+    if (!isDebug && scheme != 'https') {
+      return 'Pada aplikasi rilis, endpoint server wajib menggunakan HTTPS terenkripsi.';
+    }
+    return null;
+  }
+
+  void resetSessionExpiredGuard() {
+    _isHandlingSessionExpired = false;
+  }
+
   void init() {
+    if (_isInitialized) return;
+    _isInitialized = true;
+
     _dio = Dio(
       BaseOptions(
         baseUrl: ApiConstants.defaultBaseUrl,
@@ -30,13 +107,12 @@ class ApiClient {
       ),
     );
 
-    // Ensure robust SSL/TLS certificate handling across Android devices
-    if (_dio.httpClientAdapter is IOHttpClientAdapter) {
+    // Only allow self-signed certificates for local/private hosts in debug builds
+    if (kDebugMode && _dio.httpClientAdapter is IOHttpClientAdapter) {
       (_dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
         final client = HttpClient();
         client.badCertificateCallback = (X509Certificate cert, String host, int port) {
-          // Allow connection to official campus domain & local development subnets
-          return true;
+          return shouldAllowBadCertificate(host);
         };
         return client;
       };
@@ -49,7 +125,7 @@ class ApiClient {
           // Dynamic Base URL check
           final customUrl = await _storage.getBaseUrl();
           if (customUrl.isNotEmpty) {
-            options.baseUrl = customUrl;
+            options.baseUrl = normalizeServerUrl(customUrl);
           }
 
           // Attach Bearer Token if present
@@ -72,13 +148,16 @@ class ApiClient {
 
           return handler.next(options);
         },
-        onError: (DioException e, handler) {
-          // Handle 401 Unauthorized
-          if (e.response?.statusCode == 401) {
-            _storage.clearSession();
-            if (onSessionExpired != null) {
-              onSessionExpired!();
-            }
+        onError: (DioException e, handler) async {
+          final statusCode = e.response?.statusCode;
+          final path = e.requestOptions.path;
+          final isLoginRequest = path == ApiConstants.login || path.endsWith('/auth/login');
+
+          // Handle 401 Unauthorized once across concurrent requests
+          if (statusCode == 401 && !isLoginRequest && !_isHandlingSessionExpired) {
+            _isHandlingSessionExpired = true;
+            await _storage.clearSession();
+            onSessionExpired?.call();
           }
           return handler.next(e);
         },
@@ -89,7 +168,7 @@ class ApiClient {
   // GET Request
   Future<dynamic> get(String path, {Map<String, dynamic>? queryParameters}) async {
     try {
-      final response = await _dio.get(path, queryParameters: queryParameters);
+      final response = await _client.get(path, queryParameters: queryParameters);
       return response.data;
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -101,7 +180,7 @@ class ApiClient {
   // POST Request
   Future<dynamic> post(String path, {dynamic data}) async {
     try {
-      final response = await _dio.post(path, data: data);
+      final response = await _client.post(path, data: data);
       return response.data;
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -113,7 +192,7 @@ class ApiClient {
   // PUT Request
   Future<dynamic> put(String path, {dynamic data}) async {
     try {
-      final response = await _dio.put(path, data: data);
+      final response = await _client.put(path, data: data);
       return response.data;
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -125,7 +204,7 @@ class ApiClient {
   // DELETE Request
   Future<dynamic> delete(String path) async {
     try {
-      final response = await _dio.delete(path);
+      final response = await _client.delete(path);
       return response.data;
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -136,23 +215,34 @@ class ApiClient {
 
   /// Test connectivity to a specific or current API base URL
   Future<Map<String, dynamic>> testConnection([String? customUrl]) async {
-    final targetUrl = (customUrl != null && customUrl.trim().isNotEmpty)
-        ? customUrl.trim()
-        : await _storage.getBaseUrl();
+    final targetUrl = normalizeServerUrl(
+      (customUrl != null && customUrl.trim().isNotEmpty)
+          ? customUrl
+          : await _storage.getBaseUrl(),
+    );
+
+    final urlError = validateServerUrl(targetUrl);
+    if (urlError != null) {
+      return {
+        'success': false,
+        'latencyMs': 0,
+        'message': urlError,
+      };
+    }
 
     final stopwatch = Stopwatch()..start();
-    try {
-      final dioTest = Dio(
-        BaseOptions(
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 10),
-        ),
-      );
+    final dioTest = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
+      ),
+    );
 
-      if (dioTest.httpClientAdapter is IOHttpClientAdapter) {
+    try {
+      if (kDebugMode && dioTest.httpClientAdapter is IOHttpClientAdapter) {
         (dioTest.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
           final client = HttpClient();
-          client.badCertificateCallback = (cert, host, port) => true;
+          client.badCertificateCallback = (cert, host, port) => shouldAllowBadCertificate(host);
           return client;
         };
       }
@@ -190,6 +280,8 @@ class ApiClient {
         'latencyMs': stopwatch.elapsedMilliseconds,
         'message': 'Gagal koneksi: ${e.toString()}',
       };
+    } finally {
+      dioTest.close();
     }
   }
 

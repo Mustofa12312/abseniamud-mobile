@@ -54,6 +54,7 @@ class IaimuAttendanceApp extends StatelessWidget {
       child: MaterialApp(
         title: 'IAIMU Presensi Mobile',
         navigatorKey: NavigationService.navigatorKey,
+        scaffoldMessengerKey: NavigationService.scaffoldMessengerKey,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: const SplashScreen(),

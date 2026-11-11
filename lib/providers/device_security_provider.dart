@@ -45,10 +45,25 @@ class DeviceSecurityProvider extends ChangeNotifier {
 
   /// Set available campus locations
   void setCampusLocations(List<CampusLocationModel> locations) {
-    _campusLocations = locations;
-    if (_campusLocations.isNotEmpty && _selectedCampus == null) {
+    _campusLocations = List<CampusLocationModel>.from(locations);
+    if (_campusLocations.isEmpty) {
+      _selectedCampus = null;
+    } else if (_selectedCampus == null) {
       _selectedCampus = _campusLocations.first;
+    } else {
+      final matchIdx = _campusLocations.indexWhere((loc) => loc.id == _selectedCampus!.id);
+      _selectedCampus = matchIdx != -1 ? _campusLocations[matchIdx] : _campusLocations.first;
     }
+    notifyListeners();
+  }
+
+  /// Clears user-specific campus/location state on logout while keeping device metadata.
+  void clearLocationState() {
+    _campusLocations = [];
+    _selectedCampus = null;
+    _lastLocationResult = null;
+    _locationStatusMessage = null;
+    _isScanningLocation = false;
     notifyListeners();
   }
 
