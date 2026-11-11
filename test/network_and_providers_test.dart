@@ -1,10 +1,15 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iaimu_mobile/core/device/device_info_service.dart';
 import 'package:iaimu_mobile/core/network/api_client.dart';
 import 'package:iaimu_mobile/data/models/attendance_today_model.dart';
 import 'package:iaimu_mobile/data/models/campus_location_model.dart';
+import 'package:iaimu_mobile/providers/attendance_provider.dart';
+import 'package:iaimu_mobile/providers/correction_provider.dart';
 import 'package:iaimu_mobile/providers/device_security_provider.dart';
+import 'package:iaimu_mobile/providers/leave_provider.dart';
 import 'package:iaimu_mobile/widgets/mock_location_warning.dart';
 import 'package:iaimu_mobile/widgets/status_badge.dart';
 
@@ -237,6 +242,111 @@ void main() {
       expect(find.byType(MockLocationWarning), findsNWidgets(3));
       expect(find.textContaining('Fake GPS terdeteksi'), findsOneWidget);
       expect(find.textContaining('Izin lokasi ditolak'), findsOneWidget);
+    });
+  });
+
+  group('Prioritas Tinggi: Fingerprint, Pagination & Leave Attachment', () {
+    test('DeviceInfoService builds deterministic SHA-256 fingerprint', () {
+      final fp1 = DeviceInfoService.buildDeterministicFingerprint(
+        platform: 'android',
+        manufacturer: 'Xiaomi',
+        brand: 'Redmi',
+        model: '2312DRA50G',
+        hardwareId: 'qcom:garnet:garnet:garnet',
+      );
+      final fp2 = DeviceInfoService.buildDeterministicFingerprint(
+        platform: 'android',
+        manufacturer: '  xiaomi ',
+        brand: 'redmi',
+        model: '2312dra50g',
+        hardwareId: 'qcom:garnet:garnet:garnet',
+      );
+      final fpDifferent = DeviceInfoService.buildDeterministicFingerprint(
+        platform: 'ios',
+        manufacturer: 'Apple',
+        brand: 'Apple',
+        model: 'iPhone 15 Pro',
+        hardwareId: 'UUID-9988',
+      );
+
+      expect(fp1, matches(RegExp(r'^IAIMU-[0-9A-F]{16}$')));
+      expect(fp1, fp2);
+      expect(fpDifferent, isNot(fp1));
+      expect(fpDifferent, matches(RegExp(r'^IAIMU-[0-9A-F]{16}$')));
+    });
+
+    test('AttendanceProvider & CorrectionProvider apply paginated responses and deduplicate', () {
+      final attendanceProvider = AttendanceProvider();
+      attendanceProvider.applyHistoryResponse({
+        'data': [
+          {'id': 1, 'date': '10 Nov 2026', 'checkIn': '07:05', 'checkOut': '14:00', 'location': 'Kampus', 'status': 'HADIR'},
+          {'id': 2, 'date': '09 Nov 2026', 'checkIn': '07:30', 'checkOut': '14:05', 'location': 'Kampus', 'status': 'TERLAMBAT'},
+        ],
+        'meta': {'current_page': 1, 'last_page': 2, 'total': 3},
+      });
+      expect(attendanceProvider.historyList.length, 2);
+      expect(attendanceProvider.hasMoreHistory, isTrue);
+      expect(attendanceProvider.historyTotal, 3);
+
+      attendanceProvider.applyHistoryResponse({
+        'data': [
+          {'id': 2, 'date': '09 Nov 2026', 'checkIn': '07:30', 'checkOut': '14:05', 'location': 'Kampus', 'status': 'TERLAMBAT'},
+          {'id': 3, 'date': '08 Nov 2026', 'checkIn': '07:01', 'checkOut': '14:10', 'location': 'Kampus', 'status': 'HADIR'},
+        ],
+        'meta': {'current_page': 2, 'last_page': 2, 'total': 3},
+      }, append: true);
+      expect(attendanceProvider.historyList.length, 3);
+      expect(attendanceProvider.hasMoreHistory, isFalse);
+
+      final correctionProvider = CorrectionProvider();
+      correctionProvider.applyCorrectionsResponse({
+        'data': [
+          {'id': 10, 'date': '10 Nov 2026', 'type': 'Lupa Presensi Masuk', 'reason': 'Lupa', 'status': 'PENDING', 'created_at': '10/11/2026'},
+        ],
+        'meta': {'current_page': 1, 'last_page': 2, 'total': 2},
+      });
+      expect(correctionProvider.corrections.length, 1);
+      expect(correctionProvider.hasMore, isTrue);
+
+      correctionProvider.applyCorrectionsResponse({
+        'data': [
+          {'id': 10, 'date': '10 Nov 2026', 'type': 'Lupa Presensi Masuk', 'reason': 'Lupa', 'status': 'PENDING', 'created_at': '10/11/2026'},
+          {'id': 11, 'date': '09 Nov 2026', 'type': 'Lupa Presensi Pulang', 'reason': 'HP mati', 'status': 'APPROVED', 'created_at': '09/11/2026'},
+        ],
+        'meta': {'current_page': 2, 'last_page': 2, 'total': 2},
+      }, append: true);
+      expect(correctionProvider.corrections.length, 2);
+      expect(correctionProvider.hasMore, isFalse);
+    });
+
+    test('LeaveProvider validates attachments and builds multipart FormData when file bytes provided', () async {
+      expect(LeaveProvider.validateAttachment(fileName: 'surat.docx', sizeBytes: 1024), isNotNull);
+      expect(LeaveProvider.validateAttachment(fileName: 'besar.pdf', sizeBytes: 6 * 1024 * 1024), isNotNull);
+      expect(LeaveProvider.validateAttachment(fileName: 'surat_dokter.PDF', sizeBytes: 2048), isNull);
+      expect(LeaveProvider.validateAttachment(fileName: 'foto.jpeg', sizeBytes: 4096), isNull);
+
+      final leaveProvider = LeaveProvider();
+      final textPayload = await leaveProvider.buildSubmitPayload(
+        type: 'Izin',
+        startDate: '2026-11-11',
+        endDate: '2026-11-11',
+        reason: 'Urusan keluarga',
+        documentPath: 'SRT-001',
+      );
+      expect(textPayload, isA<Map<String, dynamic>>());
+      expect((textPayload as Map)['document_path'], 'SRT-001');
+
+      final multipartPayload = await leaveProvider.buildSubmitPayload(
+        type: 'Sakit',
+        startDate: '2026-11-11',
+        endDate: '2026-11-12',
+        reason: 'Demam tinggi',
+        documentBytes: [1, 2, 3, 4],
+        documentFileName: 'surat.pdf',
+      );
+      expect(multipartPayload, isA<FormData>());
+      final formData = multipartPayload as FormData;
+      expect(formData.files.any((entry) => entry.key == 'document' && entry.value.filename == 'surat.pdf'), isTrue);
     });
   });
 }
