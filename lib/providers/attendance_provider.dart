@@ -29,11 +29,20 @@ class AttendanceProvider extends ChangeNotifier {
   String? _historyError;
   String? get historyError => _historyError;
 
-  // History
+  // History & pagination state
   List<AttendanceHistoryItem> _historyList = [];
   List<AttendanceHistoryItem> get historyList => _historyList;
   bool _isLoadingHistory = false;
   bool get isLoadingHistory => _isLoadingHistory;
+  bool _isLoadingMoreHistory = false;
+  bool get isLoadingMoreHistory => _isLoadingMoreHistory;
+  int _historyCurrentPage = 1;
+  int get historyCurrentPage => _historyCurrentPage;
+  int _historyLastPage = 1;
+  int get historyLastPage => _historyLastPage;
+  int _historyTotal = 0;
+  int get historyTotal => _historyTotal;
+  bool get hasMoreHistory => _historyCurrentPage < _historyLastPage;
 
   // Summary
   AttendanceSummaryModel _summary = AttendanceSummaryModel.empty();

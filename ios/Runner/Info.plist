@@ -24,6 +24,14 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Aplikasi memerlukan akses lokasi GPS untuk memverifikasi keberadaan Anda di area kampus saat melakukan presensi.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Aplikasi memerlukan akses lokasi untuk memverifikasi titik presensi kampus secara akurat.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Kamera digunakan untuk mengambil foto dokumen pendukung izin atau cuti.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Akses galeri diperlukan agar Anda dapat melampirkan foto atau dokumen pendukung pengajuan izin.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
