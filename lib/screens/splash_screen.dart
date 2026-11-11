@@ -58,7 +58,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     await Future.delayed(const Duration(milliseconds: 800));
 
-    if (!mounted) return;
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
 
     if (authProvider.isAuthenticated) {
       Navigator.pushReplacement(

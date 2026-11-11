@@ -43,6 +43,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> with SingleTickerProv
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       Provider.of<ScheduleProvider>(context, listen: false).fetchSchedules();
       _scrollToSelectedDay(_selectedDayIndex);
     });

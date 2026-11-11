@@ -206,7 +206,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (item.type == 'schedule') {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const SchedulesScreen()));
     } else if (item.type == 'approval') {
-      if (item.title.contains('Cuti')) {
+      final isLeave = item.payload == 'leave' ||
+          item.title.contains('Cuti') ||
+          item.title.contains('Izin') ||
+          item.title.contains('Sakit');
+      if (isLeave) {
         Navigator.push(context, MaterialPageRoute(builder: (_) => const LeavesScreen()));
       } else {
         Navigator.push(context, MaterialPageRoute(builder: (_) => const CorrectionsScreen()));

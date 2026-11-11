@@ -42,6 +42,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
       final schedProv = Provider.of<ScheduleProvider>(context, listen: false);
       final attProv = Provider.of<AttendanceProvider>(context, listen: false);
       final devProv = Provider.of<DeviceSecurityProvider>(context, listen: false);
@@ -50,6 +51,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final corrProv = Provider.of<CorrectionProvider>(context, listen: false);
 
       await notifProv.requestPermissions();
+      if (!mounted) return;
       await schedProv.fetchSchedules();
       await leaveProv.fetchLeaves();
       await corrProv.fetchCorrections();

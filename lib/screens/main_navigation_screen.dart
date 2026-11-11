@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/navigation/navigation_service.dart';
 import '../providers/attendance_provider.dart';
 import '../providers/device_security_provider.dart';
 import 'dashboard_screen.dart';
@@ -40,12 +41,16 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
     super.initState();
     _currentIndex = widget.initialIndex;
 
+    NavigationService.resetLoginRedirectGuard();
+
     // Load initial data
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final attProvider = Provider.of<AttendanceProvider>(context, listen: false);
       final devProvider = Provider.of<DeviceSecurityProvider>(context, listen: false);
 
       attProvider.refreshDashboard().then((_) {
+        if (!mounted) return;
         devProvider.setCampusLocations(attProvider.campusLocations);
         devProvider.refreshLocation();
       });

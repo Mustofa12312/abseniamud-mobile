@@ -1,12 +1,17 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/theme/app_colors.dart';
 import '../core/constants/api_constants.dart';
 import '../core/storage/secure_storage_service.dart';
-import '../core/network/api_client.dart';
 import '../providers/auth_provider.dart';
+import '../providers/attendance_provider.dart';
+import '../providers/correction_provider.dart';
 import '../providers/device_security_provider.dart';
+import '../providers/leave_provider.dart';
+import '../providers/schedule_provider.dart';
+import '../widgets/server_config_dialog.dart';
 import 'main_navigation_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -59,10 +64,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   Future<void> _loadBaseUrl() async {
-    final url = await SecureStorageService().getBaseUrl();
+    final storage = SecureStorageService();
+    final url = await storage.getBaseUrl();
+    final rememberedEmail = await storage.getRememberedEmail();
     if (!mounted) return;
     setState(() {
       _currentBaseUrl = url;
+      if (_emailController.text.isEmpty && rememberedEmail != null) {
+        _emailController.text = rememberedEmail;
+      }
     });
   }
 
@@ -83,13 +93,25 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     HapticFeedback.lightImpact();
     FocusScope.of(context).unfocus();
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final attProvider = Provider.of<AttendanceProvider>(context, listen: false);
+    final schedProvider = Provider.of<ScheduleProvider>(context, listen: false);
+    final leaveProvider = Provider.of<LeaveProvider>(context, listen: false);
+    final corrProvider = Provider.of<CorrectionProvider>(context, listen: false);
+    final devProvider = Provider.of<DeviceSecurityProvider>(context, listen: false);
 
     final success = await authProvider.login(
       _emailController.text.trim(),
-      _passwordController.text.trim(),
+      _passwordController.text,
+      rememberMe: _rememberMe,
     );
 
     if (success && mounted) {
+      attProvider.clear();
+      schedProvider.clear();
+      leaveProvider.clear();
+      corrProvider.clear();
+      devProvider.clearLocationState();
+
       HapticFeedback.mediumImpact();
       Navigator.pushReplacement(
         context,
@@ -100,223 +122,78 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
   }
 
-  void _showServerConfigDialog() {
-    final controller = TextEditingController(text: _currentBaseUrl);
-    bool isTesting = false;
-    Map<String, dynamic>? testResult;
+  Future<void> _showServerConfigDialog() async {
+    final newUrl = await ServerConfigDialog.show(context, initialUrl: _currentBaseUrl);
+    if (newUrl != null && mounted) {
+      setState(() {
+        _currentBaseUrl = newUrl;
+      });
+    }
+  }
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: Row(
-                children: const [
-                  Icon(Icons.dns_rounded, size: 22, color: AppColors.brand700),
-                  SizedBox(width: 8),
+  Widget _buildDebugDemoAccountsBox() {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.vpn_key_rounded, size: 14, color: AppColors.brand700),
+                  SizedBox(width: 6),
                   Text(
-                    'Pengaturan Server API',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    'Mode Debug — Akun Pengujian:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimaryLight,
+                    ),
                   ),
                 ],
               ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 8),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
                   children: [
-                    const Text(
-                      'Endpoint API Presensi Kampus:',
-                      style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight),
+                    _buildAccountChip(
+                      name: 'Mustofa, S.H',
+                      role: 'Dosen',
+                      email: 'mustofa@iaimu.ac.id',
                     ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: controller,
-                      style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
-                      decoration: InputDecoration(
-                        hintText: 'https://api.iaimiftahululum.com/api',
-                        prefixIcon: const Icon(Icons.cloud_outlined),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.clear, size: 16),
-                          onPressed: () => controller.clear(),
-                        ),
-                      ),
+                    const SizedBox(width: 6),
+                    _buildAccountChip(
+                      name: 'Ahmad',
+                      role: 'Dosen',
+                      email: 'ahmad@iaimu.ac.id',
                     ),
-                    const SizedBox(height: 12),
-
-                    // Test Connection Button & Result
-                    InkWell(
-                      onTap: isTesting
-                          ? null
-                          : () async {
-                              HapticFeedback.selectionClick();
-                              setDialogState(() {
-                                isTesting = true;
-                                testResult = null;
-                              });
-                              final res = await ApiClient().testConnection(controller.text.trim());
-                              setDialogState(() {
-                                isTesting = false;
-                                testResult = res;
-                              });
-                            },
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.brand50,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.brand300),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (isTesting)
-                              const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brand700),
-                              )
-                            else
-                              const Icon(Icons.network_check_rounded, size: 16, color: AppColors.brand700),
-                            const SizedBox(width: 6),
-                            Text(
-                              isTesting ? 'Menguji Koneksi...' : 'Tes Koneksi ke Server Ini',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.brand800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    const SizedBox(width: 6),
+                    _buildAccountChip(
+                      name: 'Super Admin',
+                      role: 'Admin',
+                      email: 'admin@iaimu.ac.id',
                     ),
-
-                    if (testResult != null) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: testResult!['success'] == true
-                              ? const Color(0xFFDCFCE7)
-                              : const Color(0xFFFEE2E2),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: testResult!['success'] == true
-                                ? const Color(0xFF22C55E)
-                                : const Color(0xFFEF4444),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              testResult!['success'] == true
-                                  ? Icons.check_circle_rounded
-                                  : Icons.error_rounded,
-                              size: 16,
-                              color: testResult!['success'] == true
-                                  ? const Color(0xFF15803D)
-                                  : const Color(0xFFB91C1C),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                testResult!['message']?.toString() ?? '',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: testResult!['success'] == true
-                                      ? const Color(0xFF14532D)
-                                      : const Color(0xFF7F1D1D),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 14),
-                    const Text(
-                      'Pilihan Cepat Server:',
-                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.textPrimaryLight),
+                    const SizedBox(width: 6),
+                    _buildAccountChip(
+                      name: 'Dr. Muchlis',
+                      role: 'Tendik',
+                      email: 'muchlis@iaimu.ac.id',
                     ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        ActionChip(
-                          avatar: const Icon(Icons.cloud_done_rounded, size: 14, color: AppColors.brand600),
-                          label: const Text('Cloud Production', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-                          backgroundColor: AppColors.brand50,
-                          onPressed: () {
-                            HapticFeedback.selectionClick();
-                            controller.text = ApiConstants.defaultBaseUrl;
-                            setDialogState(() {
-                              testResult = null;
-                            });
-                          },
-                        ),
-                        ActionChip(
-                          avatar: const Icon(Icons.phone_android_rounded, size: 14, color: AppColors.accent600),
-                          label: const Text('Emulator (10.0.2.2)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-                          backgroundColor: const Color(0xFFFEF3C7),
-                          onPressed: () {
-                            HapticFeedback.selectionClick();
-                            controller.text = 'http://10.0.2.2:8000/api';
-                            setDialogState(() {
-                              testResult = null;
-                            });
-                          },
-                        ),
-                        ActionChip(
-                          avatar: const Icon(Icons.wifi_rounded, size: 14, color: Color(0xFF2563EB)),
-                          label: const Text('Wi-Fi Laptop (192.168.1.87)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-                          backgroundColor: const Color(0xFFDBEAFE),
-                          onPressed: () {
-                            HapticFeedback.selectionClick();
-                            controller.text = 'http://192.168.1.87:8000/api';
-                            setDialogState(() {
-                              testResult = null;
-                            });
-                          },
-                        ),
-                      ],
-                    )
                   ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Batal'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    HapticFeedback.lightImpact();
-                    final nav = Navigator.of(context);
-                    final newUrl = controller.text.trim();
-                    if (newUrl.isNotEmpty) {
-                      await SecureStorageService().saveBaseUrl(newUrl);
-                      if (mounted) {
-                        setState(() {
-                          _currentBaseUrl = newUrl;
-                        });
-                      }
-                    }
-                    nav.pop();
-                  },
-                  child: const Text('Simpan & Gunakan'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+      ],
     );
   }
 
@@ -812,75 +689,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             ),
                             const SizedBox(height: 14),
 
-                            // ── Bantuan Akun & Quick Fill ──
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: const [
-                                      Icon(Icons.vpn_key_rounded, size: 14, color: AppColors.brand700),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        'Pilih Akun Terdaftar (Klik untuk Isi Otomatis):',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.textPrimaryLight,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: Row(
-                                      children: [
-                                        _buildAccountChip(
-                                          name: 'Mustofa, S.H',
-                                          role: 'Dosen',
-                                          email: 'mustofa@iaimu.ac.id',
-                                        ),
-                                        const SizedBox(width: 6),
-                                        _buildAccountChip(
-                                          name: 'Ahmad',
-                                          role: 'Dosen',
-                                          email: 'ahmad@iaimu.ac.id',
-                                        ),
-                                        const SizedBox(width: 6),
-                                        _buildAccountChip(
-                                          name: 'Super Admin',
-                                          role: 'Admin',
-                                          email: 'admin@iaimu.ac.id',
-                                        ),
-                                        const SizedBox(width: 6),
-                                        _buildAccountChip(
-                                          name: 'Dr. Muchlis',
-                                          role: 'Tendik',
-                                          email: 'muchlis@iaimu.ac.id',
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  const Text(
-                                    'Default kata sandi semua akun: "password"',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontStyle: FontStyle.italic,
-                                      color: AppColors.textMutedLight,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 18),
+                            // ── Quick Fill Demo Accounts (Debug mode only) ──
+                            if (kDebugMode) _buildDebugDemoAccountsBox(),
 
                             // ── Modern Gradient Login Button ──
                             Container(

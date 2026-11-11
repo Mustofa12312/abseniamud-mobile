@@ -3,10 +3,15 @@ import 'package:provider/provider.dart';
 import '../core/theme/app_colors.dart';
 import '../core/constants/api_constants.dart';
 import '../core/storage/secure_storage_service.dart';
+import '../providers/attendance_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/correction_provider.dart';
 import '../providers/device_security_provider.dart';
+import '../providers/leave_provider.dart';
+import '../providers/notification_provider.dart';
+import '../providers/schedule_provider.dart';
 import '../widgets/device_info_card.dart';
-import 'login_screen.dart';
+import '../widgets/server_config_dialog.dart';
 import 'leaves_screen.dart';
 import 'corrections_screen.dart';
 
@@ -58,16 +63,25 @@ class ProfileScreen extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      Navigator.pop(context);
+                      final nav = Navigator.of(context);
                       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                      final attProvider = Provider.of<AttendanceProvider>(context, listen: false);
+                      final schedProvider = Provider.of<ScheduleProvider>(context, listen: false);
+                      final leaveProvider = Provider.of<LeaveProvider>(context, listen: false);
+                      final corrProvider = Provider.of<CorrectionProvider>(context, listen: false);
+                      final devProvider = Provider.of<DeviceSecurityProvider>(context, listen: false);
+                      final notifProvider = Provider.of<SmartNotificationProvider>(context, listen: false);
+
+                      nav.pop();
                       await authProvider.logout();
-                      if (context.mounted) {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(builder: (_) => const LoginScreen()),
-                          (route) => false,
-                        );
-                      }
+                      attProvider.clear();
+                      schedProvider.clear();
+                      leaveProvider.clear();
+                      corrProvider.clear();
+                      devProvider.clearLocationState();
+                      await notifProvider.clearUserData();
+
+                      nav.pushNamedAndRemoveUntil('/login', (route) => false);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.statusAlpha,
@@ -87,274 +101,21 @@ class ProfileScreen extends StatelessWidget {
   }
 
   void _showChangePasswordDialog(BuildContext context) {
-    final formKey = GlobalKey<FormState>();
-    final currentPassController = TextEditingController();
-    final newPassController = TextEditingController();
-    final confirmPassController = TextEditingController();
-    bool obscureCurrent = true;
-    bool obscureNew = true;
-
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (dialogCtx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-              title: const Text(
-                'Ubah Kata Sandi',
-                style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700),
-              ),
-              content: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: currentPassController,
-                      obscureText: obscureCurrent,
-                      decoration: InputDecoration(
-                        labelText: 'Kata Sandi Saat Ini',
-                        prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
-                        suffixIcon: IconButton(
-                          icon: Icon(obscureCurrent ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20),
-                          onPressed: () => setDialogState(() => obscureCurrent = !obscureCurrent),
-                        ),
-                      ),
-                      validator: (val) {
-                        if (val == null || val.length < 6) return 'Minimal 6 karakter';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: newPassController,
-                      obscureText: obscureNew,
-                      decoration: InputDecoration(
-                        labelText: 'Kata Sandi Baru',
-                        prefixIcon: const Icon(Icons.key_rounded, size: 20),
-                        suffixIcon: IconButton(
-                          icon: Icon(obscureNew ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20),
-                          onPressed: () => setDialogState(() => obscureNew = !obscureNew),
-                        ),
-                      ),
-                      validator: (val) {
-                        if (val == null || val.length < 6) return 'Minimal 6 karakter';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: confirmPassController,
-                      obscureText: obscureNew,
-                      decoration: const InputDecoration(
-                        labelText: 'Konfirmasi Kata Sandi Baru',
-                        prefixIcon: Icon(Icons.check_circle_outline_rounded, size: 20),
-                      ),
-                      validator: (val) {
-                        if (val != newPassController.text) return 'Konfirmasi kata sandi tidak cocok';
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              actions: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(dialogCtx),
-                        child: const Text('Batal', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          if (!formKey.currentState!.validate()) return;
-                          final auth = Provider.of<AuthProvider>(context, listen: false);
-                          final nav = Navigator.of(dialogCtx);
-                          final messenger = ScaffoldMessenger.of(context);
-
-                          final result = await auth.changePassword(
-                            currentPassword: currentPassController.text,
-                            newPassword: newPassController.text,
-                          );
-
-                          nav.pop();
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(result['message']),
-                              backgroundColor: result['success'] ? AppColors.brand600 : AppColors.statusAlpha,
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.brand600,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Text('Simpan', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (_) => _ChangePasswordDialog(
+        rootMessenger: ScaffoldMessenger.of(context),
+      ),
     );
   }
 
   void _showEditContactDialog(BuildContext context, String? currentPhone) {
-    final phoneController = TextEditingController(text: currentPhone ?? '');
-
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (dialogCtx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Text('Perbarui Kontak', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Nomor HP / WhatsApp Aktif:', style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  hintText: '081234567890',
-                  prefixIcon: Icon(Icons.phone_rounded, size: 20),
-                ),
-              ),
-            ],
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(dialogCtx),
-                    child: const Text('Batal', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      final auth = Provider.of<AuthProvider>(context, listen: false);
-                      final nav = Navigator.of(dialogCtx);
-                      final messenger = ScaffoldMessenger.of(context);
-
-                      final result = await auth.updateContact(phone: phoneController.text.trim());
-
-                      nav.pop();
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(result['message']),
-                          backgroundColor: result['success'] ? AppColors.brand600 : AppColors.statusAlpha,
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.brand600,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Simpan', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showServerConfigDialog(BuildContext context) async {
-    final currentUrl = await SecureStorageService().getBaseUrl();
-    if (!context.mounted) return;
-    final controller = TextEditingController(text: currentUrl);
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Text('Konfigurasi Endpoint API', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Tentukan URL server backend IAIMU Absensi:',
-                style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: controller,
-                decoration: const InputDecoration(
-                  hintText: 'https://api.iaimiftahululum.com/api',
-                  prefixIcon: Icon(Icons.dns_rounded, size: 20),
-                ),
-              ),
-              const SizedBox(height: 10),
-              InkWell(
-                onTap: () => controller.text = ApiConstants.defaultBaseUrl,
-                child: const Text(
-                  'Reset ke Default Produksi',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.brand700),
-                ),
-              ),
-            ],
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Batal'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      final newUrl = controller.text.trim();
-                      if (newUrl.isNotEmpty) {
-                        await SecureStorageService().saveBaseUrl(newUrl);
-                        if (ctx.mounted) {
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Endpoint server berhasil diperbarui.'),
-                              backgroundColor: AppColors.brand600,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.brand600,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Simpan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
+      builder: (_) => _EditContactDialog(
+        currentPhone: currentPhone,
+        rootMessenger: ScaffoldMessenger.of(context),
+      ),
     );
   }
 
@@ -790,118 +551,9 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             // ─── SERVER CONNECTION & TLS STATUS CARD ───
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0F172A).withValues(alpha: 0.02),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF0FDF4),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.cloud_done_rounded, color: Color(0xFF16A34A), size: 18),
-                        ),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'Koneksi API Backend',
-                          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
-                        ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              CircleAvatar(radius: 3, backgroundColor: Color(0xFF16A34A)),
-                              SizedBox(width: 4),
-                              Text('Online', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF15803D))),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 20, color: Color(0xFFF1F5F9)),
-                    FutureBuilder<String>(
-                      future: SecureStorageService().getBaseUrl(),
-                      builder: (context, snapshot) {
-                        final url = snapshot.data ?? ApiConstants.defaultBaseUrl;
-                        return Row(
-                          children: [
-                            const Text('Endpoint:', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                url,
-                                style: const TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF0F172A),
-                                  fontFamily: 'monospace',
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            InkWell(
-                              onTap: () => _showServerConfigDialog(context),
-                              borderRadius: BorderRadius.circular(6),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Text(
-                                  'Ganti',
-                                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: const [
-                        Text('Sertifikat SSL:', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                        SizedBox(width: 6),
-                        Icon(Icons.lock_rounded, size: 13, color: Color(0xFF16A34A)),
-                        SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            'HTTPS Terenkripsi TLS 1.3',
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF166534)),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: _ServerConnectionCard(),
             ),
 
             const SizedBox(height: 24),
@@ -1025,6 +677,486 @@ class ProfileScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ChangePasswordDialog extends StatefulWidget {
+  final ScaffoldMessengerState rootMessenger;
+
+  const _ChangePasswordDialog({required this.rootMessenger});
+
+  @override
+  State<_ChangePasswordDialog> createState() => _ChangePasswordDialogState();
+}
+
+class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _currentPassController = TextEditingController();
+  final _newPassController = TextEditingController();
+  final _confirmPassController = TextEditingController();
+  bool _obscureCurrent = true;
+  bool _obscureNew = true;
+  bool _isSubmitting = false;
+  String? _inlineError;
+
+  @override
+  void dispose() {
+    _currentPassController.dispose();
+    _newPassController.dispose();
+    _confirmPassController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _isSubmitting = true;
+      _inlineError = null;
+    });
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final result = await auth.changePassword(
+      currentPassword: _currentPassController.text,
+      newPassword: _newPassController.text,
+    );
+
+    if (!mounted) return;
+    if (result['success'] == true) {
+      Navigator.pop(context);
+      widget.rootMessenger.showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Kata sandi berhasil diubah.'),
+          backgroundColor: AppColors.brand600,
+        ),
+      );
+    } else {
+      setState(() {
+        _isSubmitting = false;
+        _inlineError = result['message']?.toString() ?? 'Gagal mengubah kata sandi.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: const Text(
+        'Ubah Kata Sandi',
+        style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700),
+      ),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_inlineError != null) ...[
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.securityAlertBg,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.securityAlertBorder),
+                  ),
+                  child: Text(
+                    _inlineError!,
+                    style: const TextStyle(fontSize: 12, color: AppColors.securityAlertText, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+              TextFormField(
+                controller: _currentPassController,
+                obscureText: _obscureCurrent,
+                decoration: InputDecoration(
+                  labelText: 'Kata Sandi Saat Ini',
+                  prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscureCurrent ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20),
+                    onPressed: () => setState(() => _obscureCurrent = !_obscureCurrent),
+                  ),
+                ),
+                validator: (val) {
+                  if (val == null || val.length < 6) return 'Minimal 6 karakter';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _newPassController,
+                obscureText: _obscureNew,
+                decoration: InputDecoration(
+                  labelText: 'Kata Sandi Baru',
+                  prefixIcon: const Icon(Icons.key_rounded, size: 20),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscureNew ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20),
+                    onPressed: () => setState(() => _obscureNew = !_obscureNew),
+                  ),
+                ),
+                validator: (val) {
+                  if (val == null || val.length < 6) return 'Minimal 6 karakter';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _confirmPassController,
+                obscureText: _obscureNew,
+                decoration: const InputDecoration(
+                  labelText: 'Konfirmasi Kata Sandi Baru',
+                  prefixIcon: Icon(Icons.check_circle_outline_rounded, size: 20),
+                ),
+                validator: (val) {
+                  if (val != _newPassController.text) return 'Konfirmasi kata sandi tidak cocok';
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      actions: [
+        Row(
+          children: [
+            Expanded(
+              child: TextButton(
+                onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+                child: const Text('Batal', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _isSubmitting ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brand600,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Simpan', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _EditContactDialog extends StatefulWidget {
+  final String? currentPhone;
+  final ScaffoldMessengerState rootMessenger;
+
+  const _EditContactDialog({
+    required this.currentPhone,
+    required this.rootMessenger,
+  });
+
+  @override
+  State<_EditContactDialog> createState() => _EditContactDialogState();
+}
+
+class _EditContactDialogState extends State<_EditContactDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _phoneController;
+  bool _isSubmitting = false;
+  String? _inlineError;
+
+  @override
+  void initState() {
+    super.initState();
+    _phoneController = TextEditingController(text: widget.currentPhone ?? '');
+  }
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _isSubmitting = true;
+      _inlineError = null;
+    });
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final result = await auth.updateContact(phone: _phoneController.text.trim());
+
+    if (!mounted) return;
+    if (result['success'] == true) {
+      Navigator.pop(context);
+      widget.rootMessenger.showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Kontak berhasil diperbarui.'),
+          backgroundColor: AppColors.brand600,
+        ),
+      );
+    } else {
+      setState(() {
+        _isSubmitting = false;
+        _inlineError = result['message']?.toString() ?? 'Gagal memperbarui kontak.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: const Text('Perbarui Kontak', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700)),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_inlineError != null) ...[
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.securityAlertBg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.securityAlertBorder),
+                ),
+                child: Text(
+                  _inlineError!,
+                  style: const TextStyle(fontSize: 12, color: AppColors.securityAlertText, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+            const Text('Nomor HP / WhatsApp Aktif:', style: TextStyle(fontSize: 12.5, color: AppColors.textSecondaryLight)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                hintText: '081234567890',
+                prefixIcon: Icon(Icons.phone_rounded, size: 20),
+              ),
+              validator: (val) {
+                final trimmed = val?.trim() ?? '';
+                if (trimmed.isNotEmpty && trimmed.length < 8) {
+                  return 'Nomor HP minimal 8 digit';
+                }
+                return null;
+              },
+            ),
+          ],
+        ),
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      actions: [
+        Row(
+          children: [
+            Expanded(
+              child: TextButton(
+                onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+                child: const Text('Batal', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _isSubmitting ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brand600,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Simpan', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ServerConnectionCard extends StatefulWidget {
+  const _ServerConnectionCard();
+
+  @override
+  State<_ServerConnectionCard> createState() => _ServerConnectionCardState();
+}
+
+class _ServerConnectionCardState extends State<_ServerConnectionCard> {
+  String _currentUrl = ApiConstants.defaultBaseUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUrl();
+  }
+
+  Future<void> _loadUrl() async {
+    final url = await SecureStorageService().getBaseUrl();
+    if (!mounted) return;
+    setState(() {
+      _currentUrl = url;
+    });
+  }
+
+  Future<void> _openConfig() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final updatedUrl = await ServerConfigDialog.show(context, initialUrl: _currentUrl);
+    if (updatedUrl != null && mounted) {
+      setState(() {
+        _currentUrl = updatedUrl;
+      });
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Endpoint server berhasil diperbarui.'),
+          backgroundColor: AppColors.brand600,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isHttps = _currentUrl.toLowerCase().startsWith('https://');
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.cloud_done_rounded, color: Color(0xFF16A34A), size: 18),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Koneksi API Backend',
+                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isHttps ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircleAvatar(
+                      radius: 3,
+                      backgroundColor: isHttps ? const Color(0xFF16A34A) : const Color(0xFFD97706),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      isHttps ? 'TLS' : 'Lokal',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: isHttps ? const Color(0xFF15803D) : const Color(0xFFB45309),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 20, color: Color(0xFFF1F5F9)),
+          Row(
+            children: [
+              const Text('Endpoint:', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _currentUrl,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0F172A),
+                    fontFamily: 'monospace',
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 6),
+              InkWell(
+                onTap: _openConfig,
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'Ganti',
+                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text('Transport:', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+              const SizedBox(width: 6),
+              Icon(
+                isHttps ? Icons.lock_rounded : Icons.lock_open_rounded,
+                size: 13,
+                color: isHttps ? const Color(0xFF16A34A) : const Color(0xFFD97706),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  isHttps ? 'HTTPS Terenkripsi TLS' : 'HTTP Non-TLS (Khusus Pengembangan Lokal)',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: isHttps ? const Color(0xFF166534) : const Color(0xFFB45309),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

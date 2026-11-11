@@ -392,7 +392,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   ),
                                   const SizedBox(height: 14),
                                   Text(
-                                    'Belum ada presensi pada ${_months[_selectedMonth - 1]} $_selectedYear',
+                                    attProvider.historyError ??
+                                        'Belum ada presensi pada ${_months[_selectedMonth - 1]} $_selectedYear',
+                                    textAlign: TextAlign.center,
                                     style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
                                   ),
                                 ],

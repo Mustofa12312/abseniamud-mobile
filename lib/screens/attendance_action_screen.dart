@@ -21,12 +21,19 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _scanGps();
     });
   }
 
   Future<void> _scanGps() async {
     final devProvider = Provider.of<DeviceSecurityProvider>(context, listen: false);
+    final attProvider = Provider.of<AttendanceProvider>(context, listen: false);
+    if (attProvider.campusLocations.isEmpty) {
+      await attProvider.fetchCampusLocations();
+      if (!mounted) return;
+      devProvider.setCampusLocations(attProvider.campusLocations);
+    }
     await devProvider.refreshLocation();
   }
 
@@ -42,6 +49,10 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
   void _handleAttendanceAction({required bool isCheckIn}) async {
     final devProvider = Provider.of<DeviceSecurityProvider>(context, listen: false);
     final attProvider = Provider.of<AttendanceProvider>(context, listen: false);
+
+    // 0. Guard holiday / completed state
+    final today = attProvider.todayStatus;
+    if (today != null && today.isHoliday) return;
 
     // 1. HARD SECURITY CHECK: Fake GPS / Mock Location block
     if (devProvider.isMockDetected) {
@@ -78,19 +89,21 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
     HapticFeedback.mediumImpact();
 
     // 4. Submit to Laravel API
+    final selectedCampusId = devProvider.selectedCampus?.id;
     Map<String, dynamic> result;
     if (isCheckIn) {
       result = await attProvider.checkIn(
         latitude: loc.position!.latitude,
         longitude: loc.position!.longitude,
         accuracy: loc.position!.accuracy,
-        locationId: devProvider.selectedCampus?.id,
+        locationId: selectedCampusId,
       );
     } else {
       result = await attProvider.checkOut(
         latitude: loc.position!.latitude,
         longitude: loc.position!.longitude,
         accuracy: loc.position!.accuracy,
+        locationId: selectedCampusId,
       );
     }
 
@@ -282,9 +295,11 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
     final attProvider = Provider.of<AttendanceProvider>(context);
 
     final today = attProvider.todayStatus;
-    final isNotCheckedIn = today == null || today.isNotCheckedIn;
+    final isLoadingToday = attProvider.isLoadingToday && today == null;
+    final isHoliday = today != null && today.isHoliday;
     final isCheckedIn = today != null && today.isCheckedIn;
     final isCheckedOut = today != null && today.isCheckedOut;
+    final isNotCheckedIn = today != null && today.isNotCheckedIn;
 
     final locResult = devProvider.lastLocationResult;
     final position = locResult?.position;
@@ -667,8 +682,146 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
                     ),
                     const SizedBox(height: 22),
 
+                    // Campus locations error banner
+                    if (devProvider.campusLocations.isEmpty && attProvider.locationsError != null) ...[
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFFECACA)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.location_searching_rounded, color: Color(0xFFB91C1C), size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                attProvider.locationsError!,
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF7F1D1D), fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _scanGps,
+                              child: const Text('Coba Lagi', style: TextStyle(fontWeight: FontWeight.w700)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
                     // ACTION BUTTONS SECTION
-                    if (isMock) ...[
+                    if (isLoadingToday) ...[
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
+                      ),
+                    ] else if (today == null) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFFECACA)),
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(Icons.cloud_off_rounded, size: 36, color: Color(0xFFDC2626)),
+                            const SizedBox(height: 8),
+                            Text(
+                              attProvider.todayError ?? 'Status presensi hari ini belum tersedia.',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 12.5, color: Color(0xFF475569), fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 12),
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                await attProvider.refreshDashboard();
+                                if (!mounted) return;
+                                devProvider.setCampusLocations(attProvider.campusLocations);
+                                await devProvider.refreshLocation();
+                              },
+                              icon: const Icon(Icons.refresh_rounded, size: 16),
+                              label: const Text('Muat Ulang Status Presensi'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF047857),
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else if (isCheckedOut) ...[
+                      // Finished Card
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF047857).withValues(alpha: 0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(Icons.task_alt_rounded, size: 42, color: Color(0xFF047857)),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Presensi Hari Ini Telah Lengkap',
+                              style: TextStyle(
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF064E26),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Masuk: ${today.checkInAt ?? "-"} WIB • Pulang: ${today.checkOutAt ?? "-"} WIB',
+                              style: const TextStyle(fontSize: 13, color: Color(0xFF047857), fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else if (isHoliday) ...[
+                      // Holiday Card
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: const Column(
+                          children: [
+                            Icon(Icons.weekend_rounded, size: 42, color: Color(0xFF64748B)),
+                            SizedBox(height: 10),
+                            Text(
+                              'Hari Libur / Bukan Hari Kerja Wajib',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Hari ini di luar jadwal kerja wajib Anda. Presensi tidak diperlukan.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else if (isMock) ...[
                       // Blocked Button State
                       SizedBox(
                         width: double.infinity,
@@ -799,74 +952,6 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
                             shadowColor: const Color(0xFF0F172A).withValues(alpha: 0.3),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
-                        ),
-                      ),
-                    ] else if (isCheckedOut) ...[
-                      // Finished Card
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF0FDF4),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: const Color(0xFFA7F3D0)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF047857).withValues(alpha: 0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            const Icon(Icons.task_alt_rounded, size: 42, color: Color(0xFF047857)),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Presensi Hari Ini Telah Lengkap',
-                              style: TextStyle(
-                                fontSize: 15.5,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF064E26),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Masuk: ${today.checkInAt} WIB • Pulang: ${today.checkOutAt} WIB',
-                              style: const TextStyle(fontSize: 13, color: Color(0xFF047857), fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ] else if (today.isHoliday == true) ...[
-                      // Holiday Card
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: Column(
-                          children: const [
-                            Icon(Icons.weekend_rounded, size: 42, color: Color(0xFF64748B)),
-                            SizedBox(height: 10),
-                            Text(
-                              'Hari Libur / Bukan Hari Kerja Wajib',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Hari ini di luar jadwal kerja wajib Anda. Presensi tidak diperlukan.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B)),
-                            ),
-                          ],
                         ),
                       ),
                     ],
