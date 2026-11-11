@@ -13,6 +13,20 @@ class CorrectionProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
+  bool _isLoadingMore = false;
+  bool get isLoadingMore => _isLoadingMore;
+
+  int _currentPage = 1;
+  int get currentPage => _currentPage;
+
+  int _lastPage = 1;
+  int get lastPage => _lastPage;
+
+  int _total = 0;
+  int get total => _total;
+
+  bool get hasMore => _currentPage < _lastPage;
+
   bool _isSubmitting = false;
   bool get isSubmitting => _isSubmitting;
 
@@ -23,27 +37,69 @@ class CorrectionProvider extends ChangeNotifier {
     _corrections = [];
     _errorMessage = null;
     _isLoading = false;
+    _isLoadingMore = false;
+    _currentPage = 1;
+    _lastPage = 1;
+    _total = 0;
     _isSubmitting = false;
     notifyListeners();
   }
 
-  /// Fetch user corrections
-  Future<void> fetchCorrections() async {
-    _isLoading = true;
+  /// Applies a paginated corrections payload either by replacing or appending items.
+  @visibleForTesting
+  void applyCorrectionsResponse(Map<String, dynamic> response, {bool append = false, int requestedPage = 1}) {
+    final rawList = response['data'] is List ? response['data'] as List : const [];
+    final incoming = rawList
+        .whereType<Map>()
+        .map((item) => AttendanceCorrectionModel.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+
+    if (append) {
+      final existingIds = _corrections.map((e) => e.id).toSet();
+      _corrections = [
+        ..._corrections,
+        ...incoming.where((item) => !existingIds.contains(item.id)),
+      ];
+    } else {
+      _corrections = incoming;
+    }
+
+    if (response['meta'] is Map) {
+      final meta = Map<String, dynamic>.from(response['meta'] as Map);
+      _currentPage = int.tryParse(meta['current_page']?.toString() ?? '') ?? requestedPage;
+      _lastPage = int.tryParse(meta['last_page']?.toString() ?? '') ?? _currentPage;
+      _total = int.tryParse(meta['total']?.toString() ?? '') ?? _corrections.length;
+    } else {
+      _currentPage = requestedPage;
+      _lastPage = requestedPage;
+      _total = _corrections.length;
+    }
+  }
+
+  /// Fetch user corrections (paginated; set [loadMore] to load the next page)
+  Future<void> fetchCorrections({bool loadMore = false, int perPage = 15}) async {
+    if (loadMore) {
+      if (_isLoading || _isLoadingMore || !hasMore) return;
+      _isLoadingMore = true;
+    } else {
+      _isLoading = true;
+    }
     _errorMessage = null;
     notifyListeners();
+
+    final targetPage = loadMore ? _currentPage + 1 : 1;
 
     try {
       final response = await _apiClient.get(
         ApiConstants.corrections,
-        queryParameters: {'per_page': 50},
+        queryParameters: {'page': targetPage, 'per_page': perPage},
       );
-      if (response != null && response['data'] is List) {
-        final list = response['data'] as List;
-        _corrections = list
-            .whereType<Map>()
-            .map((item) => AttendanceCorrectionModel.fromJson(Map<String, dynamic>.from(item)))
-            .toList();
+      if (response is Map) {
+        applyCorrectionsResponse(
+          Map<String, dynamic>.from(response),
+          append: loadMore,
+          requestedPage: targetPage,
+        );
       }
     } on ApiException catch (e) {
       _errorMessage = e.message;
@@ -52,6 +108,7 @@ class CorrectionProvider extends ChangeNotifier {
     }
 
     _isLoading = false;
+    _isLoadingMore = false;
     notifyListeners();
   }
 

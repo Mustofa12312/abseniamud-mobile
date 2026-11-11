@@ -74,6 +74,10 @@ class AttendanceProvider extends ChangeNotifier {
     _actionMessage = null;
     _isLoadingToday = false;
     _isLoadingHistory = false;
+    _isLoadingMoreHistory = false;
+    _historyCurrentPage = 1;
+    _historyLastPage = 1;
+    _historyTotal = 0;
     _isLoadingSummary = false;
     _isSubmitting = false;
     notifyListeners();
@@ -136,30 +140,69 @@ class AttendanceProvider extends ChangeNotifier {
     return _campusLocations;
   }
 
-  /// Get attendance history
-  Future<void> fetchHistory({int? month, int? year}) async {
-    _isLoadingHistory = true;
+  /// Applies a paginated history response payload either by replacing or appending items.
+  @visibleForTesting
+  void applyHistoryResponse(Map<String, dynamic> response, {bool append = false, int requestedPage = 1}) {
+    final rawList = response['data'] is List ? response['data'] as List : const [];
+    final incoming = rawList
+        .whereType<Map>()
+        .map((item) => AttendanceHistoryItem.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+
+    if (append) {
+      final existingIds = _historyList.map((e) => e.id).toSet();
+      _historyList = [
+        ..._historyList,
+        ...incoming.where((item) => !existingIds.contains(item.id)),
+      ];
+    } else {
+      _historyList = incoming;
+    }
+
+    if (response['meta'] is Map) {
+      final meta = Map<String, dynamic>.from(response['meta'] as Map);
+      _historyCurrentPage = int.tryParse(meta['current_page']?.toString() ?? '') ?? requestedPage;
+      _historyLastPage = int.tryParse(meta['last_page']?.toString() ?? '') ?? _historyCurrentPage;
+      _historyTotal = int.tryParse(meta['total']?.toString() ?? '') ?? _historyList.length;
+    } else {
+      _historyCurrentPage = requestedPage;
+      _historyLastPage = requestedPage;
+      _historyTotal = _historyList.length;
+    }
+  }
+
+  /// Get attendance history (paginated; set [loadMore] to fetch the next page)
+  Future<void> fetchHistory({int? month, int? year, bool loadMore = false, int perPage = 20}) async {
+    if (loadMore) {
+      if (_isLoadingHistory || _isLoadingMoreHistory || !hasMoreHistory) return;
+      _isLoadingMoreHistory = true;
+    } else {
+      _isLoadingHistory = true;
+    }
     _historyError = null;
     notifyListeners();
 
+    final targetPage = loadMore ? _historyCurrentPage + 1 : 1;
+
     try {
       final Map<String, dynamic> query = {
-        'per_page': 50,
+        'page': targetPage,
+        'per_page': perPage,
       };
       if (month != null) query['month'] = month;
       if (year != null) query['year'] = year;
 
       final response = await _apiClient.get(
         ApiConstants.attendanceHistory,
-        queryParameters: query.isNotEmpty ? query : null,
+        queryParameters: query,
       );
 
-      if (response != null && response['data'] is List) {
-        final list = response['data'] as List;
-        _historyList = list
-            .whereType<Map>()
-            .map((item) => AttendanceHistoryItem.fromJson(Map<String, dynamic>.from(item)))
-            .toList();
+      if (response is Map) {
+        applyHistoryResponse(
+          Map<String, dynamic>.from(response),
+          append: loadMore,
+          requestedPage: targetPage,
+        );
       }
     } on ApiException catch (e) {
       _historyError = e.message;
@@ -168,6 +211,7 @@ class AttendanceProvider extends ChangeNotifier {
     }
 
     _isLoadingHistory = false;
+    _isLoadingMoreHistory = false;
     notifyListeners();
   }
 
