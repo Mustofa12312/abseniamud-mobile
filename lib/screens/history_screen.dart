@@ -14,6 +14,7 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
+  final ScrollController _scrollController = ScrollController();
   late int _selectedMonth;
   late int _selectedYear;
 
@@ -35,10 +36,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final now = DateTime.now();
     _selectedMonth = now.month;
     _selectedYear = now.year;
+    _scrollController.addListener(_onScroll);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadHistory();
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 160) {
+      final provider = Provider.of<AttendanceProvider>(context, listen: false);
+      if (provider.hasMoreHistory && !provider.isLoadingMoreHistory && !provider.isLoadingHistory) {
+        provider.fetchHistory(month: _selectedMonth, year: _selectedYear, loadMore: true);
+      }
+    }
   }
 
   void _loadHistory() {
@@ -403,10 +423,31 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           ],
                         )
                       : ListView.builder(
+                          controller: _scrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.fromLTRB(16, 10, 16, 30),
-                          itemCount: history.length,
+                          itemCount: history.length + ((attProvider.hasMoreHistory || attProvider.isLoadingMoreHistory) ? 1 : 0),
                           itemBuilder: (context, index) {
+                            if (index >= history.length) {
+                              if (attProvider.isLoadingMoreHistory) {
+                                return const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                );
+                              }
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 4, bottom: 12),
+                                child: OutlinedButton.icon(
+                                  onPressed: () => attProvider.fetchHistory(
+                                    month: _selectedMonth,
+                                    year: _selectedYear,
+                                    loadMore: true,
+                                  ),
+                                  icon: const Icon(Icons.expand_more_rounded),
+                                  label: Text('Muat Lebih Banyak (${history.length}/${attProvider.historyTotal})'),
+                                ),
+                              );
+                            }
                             final item = history[index];
                             final isTerlambat = item.status.toUpperCase() == 'TERLAMBAT';
                             final isAlpha = item.status.toUpperCase() == 'TIDAK_HADIR' || item.status.toUpperCase() == 'ALPHA';

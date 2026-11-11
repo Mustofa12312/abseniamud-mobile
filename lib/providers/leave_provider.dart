@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../core/constants/api_constants.dart';
 import '../core/network/api_client.dart';
@@ -52,25 +53,94 @@ class LeaveProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Submit a new leave request (Izin / Sakit / Cuti)
+  static const int maxAttachmentBytes = 5 * 1024 * 1024;
+  static const List<String> allowedAttachmentExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
+
+  /// Validates an optional selected file extension and size (<= 5 MB).
+  static String? validateAttachment({
+    required String fileName,
+    required int sizeBytes,
+  }) {
+    final parts = fileName.trim().toLowerCase().split('.');
+    final ext = parts.length > 1 ? parts.last : '';
+    if (!allowedAttachmentExtensions.contains(ext)) {
+      return 'Format berkas harus PDF, JPG, JPEG, atau PNG.';
+    }
+    if (sizeBytes > maxAttachmentBytes) {
+      return 'Ukuran berkas maksimal 5 MB.';
+    }
+    return null;
+  }
+
+  /// Builds request payload (FormData when a physical file is attached, Map otherwise).
+  @visibleForTesting
+  Future<dynamic> buildSubmitPayload({
+    required String type,
+    required String startDate,
+    required String endDate,
+    required String reason,
+    String? documentPath,
+    String? documentFilePath,
+    String? documentFileName,
+    List<int>? documentBytes,
+  }) async {
+    final cleanDocPath = documentPath?.trim();
+    final hasFileBytes = documentBytes != null && documentBytes.isNotEmpty;
+    final hasFilePath = documentFilePath != null && documentFilePath.trim().isNotEmpty;
+
+    if (!hasFileBytes && !hasFilePath) {
+      return {
+        'type': type,
+        'start_date': startDate,
+        'end_date': endDate,
+        'reason': reason,
+        if (cleanDocPath != null && cleanDocPath.isNotEmpty) 'document_path': cleanDocPath,
+      };
+    }
+
+    final resolvedName = (documentFileName != null && documentFileName.trim().isNotEmpty)
+        ? documentFileName.trim()
+        : (documentFilePath ?? 'document').split(RegExp(r'[/\\]')).last;
+
+    final multipartFile = hasFileBytes
+        ? MultipartFile.fromBytes(documentBytes, filename: resolvedName)
+        : await MultipartFile.fromFile(documentFilePath!.trim(), filename: resolvedName);
+
+    return FormData.fromMap({
+      'type': type,
+      'start_date': startDate,
+      'end_date': endDate,
+      'reason': reason,
+      'document': multipartFile,
+      if (cleanDocPath != null && cleanDocPath.isNotEmpty) 'document_path': cleanDocPath,
+    });
+  }
+
+  /// Submit a new leave request (Izin / Sakit / Cuti), with optional file or reference
   Future<Map<String, dynamic>> submitLeave({
     required String type,
     required String startDate,
     required String endDate,
     required String reason,
     String? documentPath,
+    String? documentFilePath,
+    String? documentFileName,
+    List<int>? documentBytes,
   }) async {
     _isSubmitting = true;
     notifyListeners();
 
     try {
-      final payload = {
-        'type': type,
-        'start_date': startDate,
-        'end_date': endDate,
-        'reason': reason,
-        'document_path': ?documentPath,
-      };
+      final payload = await buildSubmitPayload(
+        type: type,
+        startDate: startDate,
+        endDate: endDate,
+        reason: reason,
+        documentPath: documentPath,
+        documentFilePath: documentFilePath,
+        documentFileName: documentFileName,
+        documentBytes: documentBytes,
+      );
 
       final response = await _apiClient.post(ApiConstants.leaves, data: payload);
       _isSubmitting = false;

@@ -13,13 +13,34 @@ class CorrectionsScreen extends StatefulWidget {
 }
 
 class _CorrectionsScreenState extends State<CorrectionsScreen> {
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       Provider.of<CorrectionProvider>(context, listen: false).fetchCorrections();
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 160) {
+      final provider = Provider.of<CorrectionProvider>(context, listen: false);
+      if (provider.hasMore && !provider.isLoadingMore && !provider.isLoading) {
+        provider.fetchCorrections(loadMore: true);
+      }
+    }
   }
 
   void _showAddCorrectionDialog() {
@@ -92,10 +113,27 @@ class _CorrectionsScreenState extends State<CorrectionsScreen> {
                     ],
                   )
                 : ListView.builder(
+                    controller: _scrollController,
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    itemCount: corrections.length,
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+                    itemCount: corrections.length + ((corrProvider.hasMore || corrProvider.isLoadingMore) ? 1 : 0),
                     itemBuilder: (context, index) {
+                    if (index >= corrections.length) {
+                      if (corrProvider.isLoadingMore) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                        );
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 4, bottom: 12),
+                        child: OutlinedButton.icon(
+                          onPressed: () => corrProvider.fetchCorrections(loadMore: true),
+                          icon: const Icon(Icons.expand_more_rounded),
+                          label: Text('Muat Lebih Banyak (${corrections.length}/${corrProvider.total})'),
+                        ),
+                      );
+                    }
                     final item = corrections[index];
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
