@@ -1,6 +1,8 @@
 class AttendanceTodayModel {
-  final String status; // NOT_CHECKED_IN, CHECKED_IN, CHECKED_OUT, HOLIDAY
-  final String? attendanceStatus; // HADIR, TERLAMBAT
+  final String status; // NOT_CHECKED_IN, CHECKED_IN, CHECKED_OUT, HOLIDAY, ON_LEAVE
+  final String? attendanceStatus; // HADIR, TERLAMBAT, IZIN, SAKIT, CUTI
+  final String? leaveType;
+  final String? holidayName;
   final String? checkInAt;
   final String? checkOutAt;
   final String? location;
@@ -10,6 +12,8 @@ class AttendanceTodayModel {
   AttendanceTodayModel({
     required this.status,
     this.attendanceStatus,
+    this.leaveType,
+    this.holidayName,
     this.checkInAt,
     this.checkOutAt,
     this.location,
@@ -21,6 +25,7 @@ class AttendanceTodayModel {
   bool get isCheckedIn => status == 'CHECKED_IN';
   bool get isCheckedOut => status == 'CHECKED_OUT';
   bool get isHoliday => status == 'HOLIDAY';
+  bool get isOnLeave => status == 'ON_LEAVE';
 
   static int? _toIntNullable(dynamic value) {
     if (value == null) return null;
@@ -34,6 +39,8 @@ class AttendanceTodayModel {
     return AttendanceTodayModel(
       status: json['status'] ?? 'NOT_CHECKED_IN',
       attendanceStatus: json['attendance_status'] as String?,
+      leaveType: json['leave_type'] as String?,
+      holidayName: json['holiday_name'] as String?,
       checkInAt: json['check_in_at'] as String?,
       checkOutAt: json['check_out_at'] as String?,
       location: json['location'] as String?,
@@ -46,6 +53,8 @@ class AttendanceTodayModel {
     return {
       'status': status,
       'attendance_status': attendanceStatus,
+      'leave_type': leaveType,
+      'holiday_name': holidayName,
       'check_in_at': checkInAt,
       'check_out_at': checkOutAt,
       'location': location,
