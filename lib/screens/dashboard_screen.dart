@@ -1067,6 +1067,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                   ),
+                ] else if (today != null && today.isOnLeave) ...[
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3E8FF),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.assignment_turned_in_rounded, size: 28, color: Color(0xFF7E22CE)),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Sedang ${today.leaveType ?? today.attendanceStatus ?? 'Izin / Cuti'}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimaryLight,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Pengajuan izin/cuti Anda telah disetujui untuk hari ini. Tidak perlu melakukan presensi.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondaryLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ] else if (today != null && today.isHoliday) ...[
                   Row(
                     children: [
@@ -1082,17 +1119,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
+                          children: [
                             Text(
-                              'Hari Libur / Bukan Hari Kerja',
-                              style: TextStyle(
+                              today.holidayName != null && today.holidayName!.isNotEmpty
+                                  ? 'Hari Libur (${today.holidayName})'
+                                  : 'Hari Libur / Bukan Hari Kerja',
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.textPrimaryLight,
                               ),
                             ),
-                            SizedBox(height: 2),
-                            Text(
+                            const SizedBox(height: 2),
+                            const Text(
                               'Hari ini di luar jadwal kerja wajib Anda. Tidak perlu melakukan presensi.',
                               style: TextStyle(
                                 fontSize: 12,

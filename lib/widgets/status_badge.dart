@@ -95,6 +95,13 @@ class StatusBadge extends StatelessWidget {
         label = 'Hari Libur';
         break;
 
+      case 'ON_LEAVE':
+        bgColor = const Color(0xFFF3E8FF);
+        textColor = const Color(0xFF7E22CE);
+        icon = Icons.assignment_turned_in_rounded;
+        label = 'Izin / Cuti';
+        break;
+
       default:
         bgColor = const Color(0xFFF1F5F9);
         textColor = AppColors.textSecondaryLight;

@@ -50,9 +50,9 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
     final devProvider = Provider.of<DeviceSecurityProvider>(context, listen: false);
     final attProvider = Provider.of<AttendanceProvider>(context, listen: false);
 
-    // 0. Guard holiday / completed state
+    // 0. Guard holiday / leave / completed state
     final today = attProvider.todayStatus;
-    if (today != null && today.isHoliday) return;
+    if (today != null && (today.isHoliday || today.isOnLeave)) return;
 
     // 1. HARD SECURITY CHECK: Fake GPS / Mock Location block
     if (devProvider.isMockDetected) {
@@ -297,6 +297,7 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
     final today = attProvider.todayStatus;
     final isLoadingToday = attProvider.isLoadingToday && today == null;
     final isHoliday = today != null && today.isHoliday;
+    final isOnLeave = today != null && today.isOnLeave;
     final isCheckedIn = today != null && today.isCheckedIn;
     final isCheckedOut = today != null && today.isCheckedOut;
     final isNotCheckedIn = today != null && today.isNotCheckedIn;
@@ -790,6 +791,37 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
                           ],
                         ),
                       ),
+                    ] else if (isOnLeave) ...[
+                      // Approved Leave Card
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFAF5FF),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFE9D5FF)),
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(Icons.assignment_turned_in_rounded, size: 42, color: Color(0xFF7E22CE)),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Sedang ${today.leaveType ?? today.attendanceStatus ?? 'Izin / Cuti'}',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF581C87),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Pengajuan izin/cuti Anda telah disetujui untuk hari ini. Check-in tidak diperlukan.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 12.5, color: Color(0xFF6B21A8)),
+                            ),
+                          ],
+                        ),
+                      ),
                     ] else if (isHoliday) ...[
                       // Holiday Card
                       Container(
@@ -800,20 +832,23 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
-                        child: const Column(
+                        child: Column(
                           children: [
-                            Icon(Icons.weekend_rounded, size: 42, color: Color(0xFF64748B)),
-                            SizedBox(height: 10),
+                            const Icon(Icons.weekend_rounded, size: 42, color: Color(0xFF64748B)),
+                            const SizedBox(height: 10),
                             Text(
-                              'Hari Libur / Bukan Hari Kerja Wajib',
-                              style: TextStyle(
+                              today.holidayName != null && today.holidayName!.isNotEmpty
+                                  ? 'Hari Libur (${today.holidayName})'
+                                  : 'Hari Libur / Bukan Hari Kerja Wajib',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w800,
                                 color: Color(0xFF0F172A),
                               ),
                             ),
-                            SizedBox(height: 4),
-                            Text(
+                            const SizedBox(height: 4),
+                            const Text(
                               'Hari ini di luar jadwal kerja wajib Anda. Presensi tidak diperlukan.',
                               textAlign: TextAlign.center,
                               style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B)),
