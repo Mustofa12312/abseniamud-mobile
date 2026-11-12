@@ -349,4 +349,26 @@ void main() {
       expect(formData.files.any((entry) => entry.key == 'document' && entry.value.filename == 'surat.pdf'), isTrue);
     });
   });
+
+  group('Konsistensi Izin & holiday_name Model Mapping', () {
+    test('AttendanceTodayModel parses holiday_name and ON_LEAVE payload accurately', () {
+      final holiday = AttendanceTodayModel.fromJson({
+        'status': 'HOLIDAY',
+        'holiday_name': 'Maulid Nabi Muhammad SAW',
+      });
+      expect(holiday.isHoliday, isTrue);
+      expect(holiday.isOnLeave, isFalse);
+      expect(holiday.holidayName, 'Maulid Nabi Muhammad SAW');
+
+      final onLeave = AttendanceTodayModel.fromJson({
+        'status': 'ON_LEAVE',
+        'leave_type': 'Sakit',
+        'attendance_status': 'SAKIT',
+      });
+      expect(onLeave.isOnLeave, isTrue);
+      expect(onLeave.isHoliday, isFalse);
+      expect(onLeave.leaveType, 'Sakit');
+      expect(onLeave.attendanceStatus, 'SAKIT');
+    });
+  });
 }
