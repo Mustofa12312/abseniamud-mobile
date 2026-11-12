@@ -26,6 +26,7 @@ class ApiConstants {
   static const String schedules = '/schedules';
   static const String locations = '/locations';
   static const String leaves = '/leaves';
+  static String leaveDocument(int leaveId) => '$leaves/$leaveId/document';
   static const String announcements = '/announcements';
 
   // Networking Defaults

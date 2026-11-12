@@ -1,0 +1,5 @@
+storePassword=GANTI_DENGAN_PASSWORD_KEYSTORE
+keyPassword=GANTI_DENGAN_PASSWORD_KEY
+keyAlias=iaimu-upload
+storeFile=iaimu-upload-keystore.jks
+

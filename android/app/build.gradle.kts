@@ -1,8 +1,38 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    FileInputStream(keystorePropertiesFile).use { stream ->
+        keystoreProperties.load(stream)
+    }
+}
+
+val releaseStoreFilePath = keystoreProperties.getProperty("storeFile")
+    ?: System.getenv("KEYSTORE_FILE")
+val releaseStorePassword = keystoreProperties.getProperty("storePassword")
+    ?: System.getenv("KEYSTORE_PASSWORD")
+val releaseKeyAlias = keystoreProperties.getProperty("keyAlias")
+    ?: System.getenv("KEY_ALIAS")
+val releaseKeyPassword = keystoreProperties.getProperty("keyPassword")
+    ?: System.getenv("KEY_PASSWORD")
+
+val releaseStoreFile = releaseStoreFilePath
+    ?.takeIf { it.isNotBlank() }
+    ?.let { file(it) }
+
+val hasReleaseSigning = releaseStoreFile != null &&
+    releaseStoreFile.exists() &&
+    !releaseStorePassword.isNullOrBlank() &&
+    !releaseKeyAlias.isNullOrBlank() &&
+    !releaseKeyPassword.isNullOrBlank()
 
 android {
     namespace = "id.ac.iaimu.absensi.iaimu_mobile"
@@ -29,16 +59,41 @@ android {
         multiDexEnabled = true
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = releaseStoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
+    }
+}
+
+gradle.taskGraph.whenReady {
+    val isReleaseTask = allTasks.any { task ->
+        task.name.contains("Release", ignoreCase = true)
+    }
+    if (isReleaseTask && !hasReleaseSigning) {
+        throw GradleException(
+            "Release signing configuration is missing. Copy android/key.properties.example " +
+                "to android/key.properties and verify the keystore file exists before building release."
+        )
     }
 }
 

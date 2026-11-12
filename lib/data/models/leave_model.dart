@@ -24,6 +24,19 @@ class LeaveModel {
   bool get isPending => status.toUpperCase() == 'PENDING';
   bool get isApproved => status.toUpperCase() == 'APPROVED';
   bool get isRejected => status.toUpperCase() == 'REJECTED';
+  bool get hasDocument => documentPath != null && documentPath!.trim().isNotEmpty;
+
+  bool get isRemoteDocumentUrl {
+    final trimmed = documentPath?.trim().toLowerCase() ?? '';
+    return trimmed.startsWith('http://') || trimmed.startsWith('https://');
+  }
+
+  String get documentFileName {
+    final raw = documentPath?.trim() ?? '';
+    if (raw.isEmpty) return 'lampiran';
+    final normalized = raw.split('?').first.split(RegExp(r'[/\\]')).last.trim();
+    return normalized.isNotEmpty ? normalized : raw;
+  }
 
   factory LeaveModel.fromJson(Map<String, dynamic> json) {
     return LeaveModel(

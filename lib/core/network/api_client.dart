@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
@@ -177,6 +178,39 @@ class ApiClient {
     }
   }
 
+  /// Downloads binary bytes from an authenticated API endpoint (e.g. leave attachment).
+  Future<({Uint8List bytes, String? contentType, String? fileName})> getBinary(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    try {
+      final response = await _client.get<List<int>>(
+        path,
+        queryParameters: queryParameters,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      final rawBytes = response.data ?? const <int>[];
+      final contentType = response.headers.value('content-type');
+      final disposition = response.headers.value('content-disposition');
+      final fileNameMatch = disposition != null
+          ? RegExp(r'filename\*?=([^;]+)', caseSensitive: false).firstMatch(disposition)
+          : null;
+      String? fileName = fileNameMatch?.group(1)?.trim().replaceAll('"', '');
+      if (fileName != null && fileName.toLowerCase().startsWith("utf-8''")) {
+        fileName = Uri.decodeFull(fileName.substring(7));
+      }
+      return (
+        bytes: Uint8List.fromList(rawBytes),
+        contentType: contentType,
+        fileName: fileName,
+      );
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      throw ApiException(message: 'Terjadi kesalahan sistem: ${e.toString()}');
+    }
+  }
+
   // POST Request
   Future<dynamic> post(String path, {dynamic data, Options? options}) async {
     try {
@@ -309,7 +343,12 @@ class ApiClient {
 
     if (e.response != null) {
       final statusCode = e.response?.statusCode;
-      final data = e.response?.data;
+      dynamic data = e.response?.data;
+      if (data is List<int>) {
+        try {
+          data = jsonDecode(utf8.decode(data));
+        } catch (_) {}
+      }
 
       String message = 'Terjadi kesalahan pada server ($statusCode).';
 
