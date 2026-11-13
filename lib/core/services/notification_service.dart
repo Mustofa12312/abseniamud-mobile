@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -30,6 +32,15 @@ class NotificationService {
     );
 
     try {
+      try {
+        tz.initializeTimeZones();
+        try {
+          tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+        } catch (_) {}
+      } catch (e) {
+        debugPrint('TimeZone init error: $e');
+      }
+
       await _notificationsPlugin.initialize(
         settings: initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) {
@@ -151,6 +162,73 @@ class NotificationService {
       );
     } catch (e) {
       debugPrint('Failed to show notification: $e');
+    }
+  }
+
+  /// Schedule a notification to trigger at a specific future [scheduledDate]
+  /// using system alarms. Fires reliably even when the app is in background or closed.
+  Future<bool> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    String? channelId,
+    String? payload,
+  }) async {
+    final now = DateTime.now();
+    if (scheduledDate.isBefore(now)) {
+      return false;
+    }
+
+    final channel = channelId ?? channelReminders;
+    String channelName = 'Pengingat Presensi';
+    if (channel == channelApprovals) channelName = 'Persetujuan Izin & Koreksi';
+    if (channel == channelBroadcasts) channelName = 'Pengumuman Kampus';
+    if (channel == channelGeofence) channelName = 'Kedatangan Kampus';
+
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      channel,
+      channelName,
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: true,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    final NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+    );
+
+    try {
+      final tzLocation = tz.local;
+      final scheduledTz = tz.TZDateTime.from(scheduledDate, tzLocation);
+
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          id: id,
+          title: title,
+          body: body,
+          scheduledDate: scheduledTz,
+          notificationDetails: platformDetails,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          payload: payload,
+        );
+      } catch (_) {
+        // Fall back to inexact alarm if exact alarm permission is restricted
+        await _notificationsPlugin.zonedSchedule(
+          id: id,
+          title: title,
+          body: body,
+          scheduledDate: scheduledTz,
+          notificationDetails: platformDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          payload: payload,
+        );
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Failed to schedule notification: $e');
+      return false;
     }
   }
 
