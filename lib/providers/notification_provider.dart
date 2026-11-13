@@ -202,6 +202,26 @@ class SmartNotificationProvider extends ChangeNotifier {
               );
               await prefs.setBool(cacheKey, true);
             }
+          } else if (diff > 15) {
+            // Schedule background alarm 15 minutes before class
+            final reminderDate = DateTime(
+              now.year,
+              now.month,
+              now.day,
+              parts[0],
+              parts[1],
+            ).subtract(const Duration(minutes: 15));
+
+            if (reminderDate.isAfter(now)) {
+              await _service.scheduleNotification(
+                id: item.id + 1000,
+                title: 'Pengingat Kuliah: ${item.courseName}',
+                body: 'Jadwal di ${item.roomName} dimulai pukul ${item.startTime} WIB (15 menit lagi). Jangan lupa presensi masuk!',
+                scheduledDate: reminderDate,
+                channelId: NotificationService.channelReminders,
+                payload: 'schedule_${item.id}',
+              );
+            }
           }
         }
       } catch (_) {}
@@ -214,6 +234,12 @@ class SmartNotificationProvider extends ChangeNotifier {
     DateTime? nowOverride,
   }) async {
     if (!_checkOutAlertsEnabled || today == null) return;
+
+    // If user has already checked out, cancel any pending check-out alarm
+    if (today.isCheckedOut) {
+      await _service.cancel(9999);
+      return;
+    }
 
     // Only if already checked in and not yet checked out
     if (today.isCheckedIn && !today.isCheckedOut) {
@@ -238,6 +264,26 @@ class SmartNotificationProvider extends ChangeNotifier {
             notificationId: 9999,
           );
           await prefs.setBool(cacheKey, true);
+        }
+      } else {
+        // Schedule future alarm for checkout time today
+        final targetDate = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          checkout.hour,
+          checkout.minute,
+        );
+        if (targetDate.isAfter(now)) {
+          final formattedTime = today.formattedCheckoutTime;
+          await _service.scheduleNotification(
+            id: 9999,
+            title: 'Waktu Pulang Kerja ($formattedTime WIB)',
+            body: 'Jam kerja wajib telah selesai. Pastikan Anda telah melakukan Check-Out Pulang sebelum meninggalkan kampus.',
+            scheduledDate: targetDate,
+            channelId: NotificationService.channelReminders,
+            payload: 'checkout_reminder',
+          );
         }
       }
     }
