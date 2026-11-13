@@ -254,7 +254,7 @@ class AttendanceProvider extends ChangeNotifier {
     } catch (_) {}
   }
 
-  /// Check-in request to Laravel API
+  /// Check-in request to Laravel API with network resilience
   Future<Map<String, dynamic>> checkIn({
     required double latitude,
     required double longitude,
@@ -265,44 +265,67 @@ class AttendanceProvider extends ChangeNotifier {
     _actionMessage = null;
     notifyListeners();
 
-    try {
-      final payload = {
-        'latitude': latitude,
-        'longitude': longitude,
-        'accuracy': accuracy,
-        'location_id': ?locationId,
-      };
+    final payload = {
+      'latitude': latitude,
+      'longitude': longitude,
+      'accuracy': accuracy,
+      'location_id': ?locationId,
+    };
 
-      final response = await _apiClient.post(ApiConstants.checkIn, data: payload);
+    int attempts = 0;
+    while (attempts < 2) {
+      attempts++;
+      try {
+        final response = await _apiClient.post(ApiConstants.checkIn, data: payload);
 
-      _isSubmitting = false;
-      if (response != null && response['success'] == true) {
-        await fetchTodayStatus();
-        await fetchSummary();
-        return {
-          'success': true,
-          'message': response['message'] ?? 'Check-in berhasil tercatat!',
-          'data': response['data'],
-        };
-      } else {
+        _isSubmitting = false;
+        if (response != null && response['success'] == true) {
+          await fetchTodayStatus();
+          await fetchSummary();
+          return {
+            'success': true,
+            'message': response['message'] ?? 'Check-in berhasil tercatat!',
+            'data': response['data'],
+          };
+        } else {
+          notifyListeners();
+          return {
+            'success': false,
+            'message': response?['message'] ?? 'Gagal melakukan check-in.',
+          };
+        }
+      } on ApiException catch (e) {
+        final isTransientNetwork = e.statusCode == 408 ||
+            e.statusCode == 503 ||
+            e.message.toLowerCase().contains('timeout') ||
+            e.message.toLowerCase().contains('koneksi') ||
+            e.message.toLowerCase().contains('internet');
+
+        if (isTransientNetwork && attempts < 2) {
+          await Future.delayed(const Duration(milliseconds: 1000));
+          continue;
+        }
+
+        _isSubmitting = false;
         notifyListeners();
-        return {
-          'success': false,
-          'message': response?['message'] ?? 'Gagal melakukan check-in.',
-        };
+        return {'success': false, 'message': e.message};
+      } catch (e) {
+        if (attempts < 2) {
+          await Future.delayed(const Duration(milliseconds: 1000));
+          continue;
+        }
+        _isSubmitting = false;
+        notifyListeners();
+        return {'success': false, 'message': 'Terjadi kendala: ${e.toString()}'};
       }
-    } on ApiException catch (e) {
-      _isSubmitting = false;
-      notifyListeners();
-      return {'success': false, 'message': e.message};
-    } catch (e) {
-      _isSubmitting = false;
-      notifyListeners();
-      return {'success': false, 'message': 'Terjadi kendala: ${e.toString()}'};
     }
+
+    _isSubmitting = false;
+    notifyListeners();
+    return {'success': false, 'message': 'Gagal terhubung ke server setelah mencoba kembali.'};
   }
 
-  /// Check-out request to Laravel API
+  /// Check-out request to Laravel API with network resilience
   Future<Map<String, dynamic>> checkOut({
     required double latitude,
     required double longitude,
@@ -313,40 +336,63 @@ class AttendanceProvider extends ChangeNotifier {
     _actionMessage = null;
     notifyListeners();
 
-    try {
-      final payload = {
-        'latitude': latitude,
-        'longitude': longitude,
-        'accuracy': accuracy,
-        'location_id': ?locationId,
-      };
+    final payload = {
+      'latitude': latitude,
+      'longitude': longitude,
+      'accuracy': accuracy,
+      'location_id': ?locationId,
+    };
 
-      final response = await _apiClient.post(ApiConstants.checkOut, data: payload);
+    int attempts = 0;
+    while (attempts < 2) {
+      attempts++;
+      try {
+        final response = await _apiClient.post(ApiConstants.checkOut, data: payload);
 
-      _isSubmitting = false;
-      if (response != null && response['success'] == true) {
-        await fetchTodayStatus();
-        await fetchSummary();
-        return {
-          'success': true,
-          'message': response['message'] ?? 'Check-out berhasil dicatat. Terima kasih!',
-          'data': response['data'],
-        };
-      } else {
+        _isSubmitting = false;
+        if (response != null && response['success'] == true) {
+          await fetchTodayStatus();
+          await fetchSummary();
+          return {
+            'success': true,
+            'message': response['message'] ?? 'Check-out berhasil dicatat. Terima kasih!',
+            'data': response['data'],
+          };
+        } else {
+          notifyListeners();
+          return {
+            'success': false,
+            'message': response?['message'] ?? 'Gagal melakukan check-out.',
+          };
+        }
+      } on ApiException catch (e) {
+        final isTransientNetwork = e.statusCode == 408 ||
+            e.statusCode == 503 ||
+            e.message.toLowerCase().contains('timeout') ||
+            e.message.toLowerCase().contains('koneksi') ||
+            e.message.toLowerCase().contains('internet');
+
+        if (isTransientNetwork && attempts < 2) {
+          await Future.delayed(const Duration(milliseconds: 1000));
+          continue;
+        }
+
+        _isSubmitting = false;
         notifyListeners();
-        return {
-          'success': false,
-          'message': response?['message'] ?? 'Gagal melakukan check-out.',
-        };
+        return {'success': false, 'message': e.message};
+      } catch (e) {
+        if (attempts < 2) {
+          await Future.delayed(const Duration(milliseconds: 1000));
+          continue;
+        }
+        _isSubmitting = false;
+        notifyListeners();
+        return {'success': false, 'message': 'Terjadi kendala: ${e.toString()}'};
       }
-    } on ApiException catch (e) {
-      _isSubmitting = false;
-      notifyListeners();
-      return {'success': false, 'message': e.message};
-    } catch (e) {
-      _isSubmitting = false;
-      notifyListeners();
-      return {'success': false, 'message': 'Terjadi kendala: ${e.toString()}'};
     }
+
+    _isSubmitting = false;
+    notifyListeners();
+    return {'success': false, 'message': 'Gagal terhubung ke server setelah mencoba kembali.'};
   }
 }

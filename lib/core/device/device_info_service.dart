@@ -111,7 +111,6 @@ class DeviceInfoService {
           androidInfo.board,
           androidInfo.device,
           androidInfo.product,
-          androidInfo.id,
         ].join(':');
       } else if (Platform.isIOS) {
         platformName = 'ios';
