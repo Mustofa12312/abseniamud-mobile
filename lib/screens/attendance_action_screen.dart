@@ -114,7 +114,7 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
       _showSuccessDialog(result['message'] ?? 'Presensi berhasil dicatat!');
     } else {
       HapticFeedback.heavyImpact();
-      _showErrorDialog(result['message'] ?? 'Gagal memproses presensi.');
+      _showErrorDialog(result['message'] ?? 'Gagal memproses presensi.', isCheckIn: isCheckIn);
     }
   }
 
@@ -260,7 +260,16 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
     );
   }
 
-  void _showErrorDialog(String message) {
+  void _showErrorDialog(String message, {bool isCheckIn = true}) {
+    final lower = message.toLowerCase();
+    final isGpsIssue = lower.contains('radius') ||
+        lower.contains('lokasi') ||
+        lower.contains('jarak') ||
+        lower.contains('akurasi');
+    final isNetworkIssue = lower.contains('koneksi') ||
+        lower.contains('timeout') ||
+        lower.contains('internet');
+
     showDialog(
       context: context,
       builder: (context) {
@@ -274,6 +283,25 @@ class _AttendanceActionScreenState extends State<AttendanceActionScreen> {
             style: const TextStyle(fontSize: 13, height: 1.4),
           ),
           actions: [
+            if (isGpsIssue) ...[
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _scanGps();
+                },
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: const Text('Pindai Ulang GPS'),
+              ),
+            ] else if (isNetworkIssue) ...[
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _handleAttendanceAction(isCheckIn: isCheckIn);
+                },
+                icon: const Icon(Icons.replay_rounded, size: 16),
+                label: const Text('Coba Lagi'),
+              ),
+            ],
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(

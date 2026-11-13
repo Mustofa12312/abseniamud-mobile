@@ -232,6 +232,85 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   int _serverTapCount = 0;
   DateTime? _lastServerTap;
 
+  void _showDeviceResetHelpDialog(DeviceMetadata? meta) {
+    final deviceId = meta?.deviceFingerprint ?? 'Tidak diketahui';
+    final deviceModel = meta?.displayName ?? 'Perangkat ini';
+    final email = _emailController.text.trim();
+
+    final template = 'Permohonan Reset Perangkat IAIMU Presensi:\n'
+        'Akun/Email: ${email.isNotEmpty ? email : "-"}\n'
+        'Perangkat Baru: $deviceModel\n'
+        'Device ID: $deviceId\n'
+        'Alasan: Ganti smartphone / instal ulang sistem.';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Icon(Icons.phonelink_lock_rounded, color: AppColors.brand700, size: 22),
+            SizedBox(width: 8),
+            Text('Reset Binding Perangkat', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Setiap akun IAIMU terikat pada 1 perangkat fisik untuk mencegah titip presensi. '
+              'Jika Anda mengganti smartphone atau menginstal ulang sistem, ajukan reset binding ke admin:',
+              style: TextStyle(fontSize: 12.5, height: 1.4, color: Color(0xFF334155)),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Device ID Perangkat Ini:', style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 3),
+                  SelectableText(
+                    deviceId,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, fontFamily: 'monospace', color: Color(0xFF0F172A)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: template));
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Format pengajuan reset berhasil disalin ke clipboard!'),
+                  backgroundColor: AppColors.brand700,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            child: const Text('Salin Format Pengajuan', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.brand700)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand600, foregroundColor: Colors.white),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _handleServerPillTap() async {
     if (kDebugMode) {
       await _showServerConfigDialog();
@@ -722,22 +801,58 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(color: AppColors.securityAlertBorder),
                                 ),
-                                child: Row(
+                                child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Icon(Icons.error_outline_rounded, color: AppColors.securityAlertText, size: 20),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        authProvider.errorMessage!,
-                                        style: const TextStyle(
-                                          fontSize: 12.5,
-                                          color: AppColors.securityAlertText,
-                                          fontWeight: FontWeight.w600,
-                                          height: 1.3,
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Icon(Icons.error_outline_rounded, color: AppColors.securityAlertText, size: 20),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            authProvider.errorMessage!,
+                                            style: const TextStyle(
+                                              fontSize: 12.5,
+                                              color: AppColors.securityAlertText,
+                                              fontWeight: FontWeight.w600,
+                                              height: 1.3,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (authProvider.errorMessage!.toLowerCase().contains('perangkat') ||
+                                        authProvider.errorMessage!.toLowerCase().contains('terikat')) ...[
+                                      const SizedBox(height: 10),
+                                      InkWell(
+                                        onTap: () => _showDeviceResetHelpDialog(meta),
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: AppColors.securityAlertBorder),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.phonelink_setup_rounded, size: 14, color: AppColors.securityAlertText),
+                                              SizedBox(width: 6),
+                                              Text(
+                                                'Panduan Reset Binding Perangkat',
+                                                style: TextStyle(
+                                                  fontSize: 11.5,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: AppColors.securityAlertText,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                    ),
+                                    ],
                                   ],
                                 ),
                               ),
