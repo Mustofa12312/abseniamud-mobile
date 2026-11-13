@@ -122,6 +122,197 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
   }
 
+  void _showForgotPasswordDialog() {
+    HapticFeedback.lightImpact();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        icon: Container(
+          width: 52,
+          height: 52,
+          decoration: const BoxDecoration(
+            color: AppColors.brand100,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.help_outline_rounded, color: AppColors.brand700, size: 28),
+        ),
+        title: const Text(
+          'Lupa Kata Sandi?',
+          style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800),
+          textAlign: TextAlign.center,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Demi integritas dan keamanan data presensi kampus IAIMU, pemulihan akun dilakukan secara terverifikasi melalui Tim IT & Bagian Kepegawaian Kampus.',
+              style: TextStyle(fontSize: 12.5, color: Color(0xFF334155), height: 1.4),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Pusat Bantuan Administrasi:',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: const [
+                      Icon(Icons.email_outlined, size: 14, color: AppColors.brand700),
+                      SizedBox(width: 6),
+                      Text(
+                        'it@iaimu.ac.id',
+                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: const [
+                      Icon(Icons.location_on_outlined, size: 14, color: AppColors.brand700),
+                      SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Kantor BAAK / Rektorat Lt. 1 IAIMU',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Tips: Lampirkan Nama Lengkap, NIDN / NIP, serta foto Kartu Identitas saat menghubungi admin.',
+              style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8), fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(const ClipboardData(text: 'it@iaimu.ac.id'));
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Email IT (it@iaimu.ac.id) berhasil disalin ke clipboard!'),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: AppColors.brand700,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            child: const Text('Salin Email IT', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.brand700)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.brand600,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _serverTapCount = 0;
+  DateTime? _lastServerTap;
+
+  Future<void> _handleServerPillTap() async {
+    if (kDebugMode) {
+      await _showServerConfigDialog();
+      return;
+    }
+
+    final now = DateTime.now();
+    if (_lastServerTap == null || now.difference(_lastServerTap!) > const Duration(seconds: 2)) {
+      _serverTapCount = 1;
+    } else {
+      _serverTapCount++;
+    }
+    _lastServerTap = now;
+
+    if (_serverTapCount >= 5) {
+      _serverTapCount = 0;
+      HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mode Pengembang: Membuka setelan server API.'),
+          backgroundColor: AppColors.brand700,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      await _showServerConfigDialog();
+    } else {
+      HapticFeedback.lightImpact();
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.verified_rounded, color: AppColors.brand700, size: 22),
+              SizedBox(width: 8),
+              Text('Server Resmi Kampus', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Aplikasi ini terhubung langsung ke server pusat resmi Institut Agama Islam Miftahul Ulum (IAIMU):',
+                style: TextStyle(fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SelectableText(
+                  _currentBaseUrl,
+                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace', fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Demi keamanan data dan enkripsi TLS, endpoint produksi dikunci agar tidak berubah secara tidak sengaja.',
+                style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.brand600,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Mengerti'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   Future<void> _showServerConfigDialog() async {
     final newUrl = await ServerConfigDialog.show(context, initialUrl: _currentBaseUrl);
     if (newUrl != null && mounted) {
@@ -660,29 +851,50 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             ),
                             const SizedBox(height: 12),
 
-                            // ── Remember Me Checkbox ──
+                            // ── Remember Me Checkbox & Forgot Password ──
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: Checkbox(
-                                    value: _rememberMe,
-                                    activeColor: AppColors.brand600,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                                    onChanged: (val) {
-                                      setState(() {
-                                        _rememberMe = val ?? true;
-                                      });
-                                    },
-                                  ),
+                                Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: Checkbox(
+                                        value: _rememberMe,
+                                        activeColor: AppColors.brand600,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                        onChanged: (val) {
+                                          setState(() {
+                                            _rememberMe = val ?? true;
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      'Ingat akun di perangkat',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondaryLight,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'Ingat akun di perangkat ini',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondaryLight,
+                                TextButton(
+                                  onPressed: _showForgotPasswordDialog,
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: const Text(
+                                    'Lupa Sandi?',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.brand700,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -792,7 +1004,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               child: Column(
                 children: [
                   InkWell(
-                    onTap: _showServerConfigDialog,
+                    onTap: _handleServerPillTap,
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -814,7 +1026,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'Server: ${_currentBaseUrl.replaceAll('https://', '').replaceAll('http://', '').replaceAll('/api', '')}',
+                            kDebugMode
+                                ? 'Server: ${_currentBaseUrl.replaceAll('https://', '').replaceAll('http://', '').replaceAll('/api', '')}'
+                                : 'Server Resmi IAIMU (Aktif)',
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -822,7 +1036,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             ),
                           ),
                           const SizedBox(width: 4),
-                          const Icon(Icons.tune_rounded, size: 13, color: AppColors.textSecondaryLight),
+                          Icon(
+                            kDebugMode ? Icons.tune_rounded : Icons.lock_outline_rounded,
+                            size: 13,
+                            color: AppColors.textSecondaryLight,
+                          ),
                         ],
                       ),
                     ),
