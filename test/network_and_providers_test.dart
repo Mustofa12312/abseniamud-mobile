@@ -4,12 +4,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iaimu_mobile/core/device/device_info_service.dart';
 import 'package:iaimu_mobile/core/network/api_client.dart';
+import 'package:iaimu_mobile/core/services/notification_service.dart';
 import 'package:iaimu_mobile/data/models/attendance_today_model.dart';
 import 'package:iaimu_mobile/data/models/campus_location_model.dart';
+import 'package:iaimu_mobile/data/models/schedule_model.dart';
 import 'package:iaimu_mobile/providers/attendance_provider.dart';
 import 'package:iaimu_mobile/providers/correction_provider.dart';
 import 'package:iaimu_mobile/providers/device_security_provider.dart';
 import 'package:iaimu_mobile/providers/leave_provider.dart';
+import 'package:iaimu_mobile/providers/notification_provider.dart';
 import 'package:iaimu_mobile/widgets/mock_location_warning.dart';
 import 'package:iaimu_mobile/widgets/status_badge.dart';
 
@@ -369,6 +372,35 @@ void main() {
       expect(onLeave.isHoliday, isFalse);
       expect(onLeave.leaveType, 'Sakit');
       expect(onLeave.attendanceStatus, 'SAKIT');
+    });
+
+    test('NotificationService rejects scheduling in the past safely', () async {
+      final notif = NotificationService();
+      final pastDate = DateTime.now().subtract(const Duration(minutes: 10));
+      final scheduled = await notif.scheduleNotification(
+        id: 1234,
+        title: 'Pengingat Masa Lalu',
+        body: 'Waktu sudah lewat',
+        scheduledDate: pastDate,
+      );
+      expect(scheduled, isFalse);
+    });
+
+    test('SmartNotificationProvider checkCheckOutReminder triggers reminder at configured checkout time', () async {
+      final provider = SmartNotificationProvider();
+      final checkedInToday = AttendanceTodayModel.fromJson({
+        'status': 'CHECKED_IN',
+        'attendance_status': 'HADIR',
+        'expected_checkout_time': '16:00',
+      });
+
+      // Override current time to 16:05 (past 16:00 checkout)
+      final pastCheckoutTime = DateTime(2026, 11, 13, 16, 5);
+      await provider.checkCheckOutReminder(checkedInToday, nowOverride: pastCheckoutTime);
+
+      expect(provider.items.any((e) => e.type == 'checkout'), isTrue);
+      final item = provider.items.firstWhere((e) => e.type == 'checkout');
+      expect(item.title.contains('16:00'), isTrue);
     });
   });
 }
