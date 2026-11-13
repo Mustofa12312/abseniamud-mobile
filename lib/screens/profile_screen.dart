@@ -1114,22 +1114,24 @@ class _ServerConnectionCardState extends State<_ServerConnectionCard> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(width: 6),
-              InkWell(
-                onTap: _openConfig,
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text(
-                    'Ganti',
-                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+              if (kDebugMode) ...[
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: _openConfig,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'Ganti',
+                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
           const SizedBox(height: 8),
