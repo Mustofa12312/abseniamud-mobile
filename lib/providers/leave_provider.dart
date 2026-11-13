@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../core/constants/api_constants.dart';
 import '../core/network/api_client.dart';
 import '../core/network/api_exception.dart';
@@ -166,6 +166,47 @@ class LeaveProvider extends ChangeNotifier {
       _isSubmitting = false;
       notifyListeners();
       return {'success': false, 'message': 'Terjadi kendala: ${e.toString()}'};
+    }
+  }
+
+  /// Downloads an uploaded private leave attachment from the authenticated API endpoint.
+  Future<({bool success, Uint8List? bytes, String? contentType, String? fileName, String? message})> fetchLeaveDocument(
+    int leaveId,
+  ) async {
+    try {
+      final result = await _apiClient.getBinary(ApiConstants.leaveDocument(leaveId));
+      if (result.bytes.isEmpty) {
+        return (
+          success: false,
+          bytes: null,
+          contentType: null,
+          fileName: null,
+          message: 'Berkas dokumen kosong.',
+        );
+      }
+      return (
+        success: true,
+        bytes: result.bytes,
+        contentType: result.contentType,
+        fileName: result.fileName,
+        message: null,
+      );
+    } on ApiException catch (e) {
+      return (
+        success: false,
+        bytes: null,
+        contentType: null,
+        fileName: null,
+        message: e.message,
+      );
+    } catch (e) {
+      return (
+        success: false,
+        bytes: null,
+        contentType: null,
+        fileName: null,
+        message: 'Gagal mengunduh lampiran: ${e.toString()}',
+      );
     }
   }
 }

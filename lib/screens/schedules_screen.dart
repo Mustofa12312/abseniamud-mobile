@@ -249,9 +249,20 @@ class _SchedulesScreenState extends State<SchedulesScreen> with SingleTickerProv
                       ),
                       _buildDetailRow(
                         Icons.school_rounded,
-                        'Program Studi & Jenjang',
-                        'S1 Reguler • Semester Ganjil',
+                        'Program Studi & Semester',
+                        item.programStudyAndSemesterLabel,
                       ),
+                      if (item.courseMetaLabel != null) ...[
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 10),
+                          child: Divider(height: 1, color: Color(0xFFE2E8F0)),
+                        ),
+                        _buildDetailRow(
+                          Icons.menu_book_rounded,
+                          'Kode MK & Bobot SKS',
+                          item.courseMetaLabel!,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -263,11 +274,15 @@ class _SchedulesScreenState extends State<SchedulesScreen> with SingleTickerProv
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {
-                          Clipboard.setData(
-                            ClipboardData(
-                              text: '${item.courseName} | ${item.dayOfWeek}, ${item.startTime}-${item.endTime} | ${item.roomName}',
-                            ),
-                          );
+                          final meta = [
+                            item.courseName,
+                            if (item.courseMetaLabel != null) '(${item.courseMetaLabel})',
+                            '| ${item.dayOfWeek}, ${item.startTime}-${item.endTime}',
+                            '| ${item.roomName}',
+                            if (item.facultyName != null || item.semester != null)
+                              '| ${item.programStudyAndSemesterLabel}',
+                          ].join(' ');
+                          Clipboard.setData(ClipboardData(text: meta));
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -945,7 +960,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> with SingleTickerProv
                             border: Border.all(color: const Color(0xFFE2E8F0)),
                           ),
                           child: Text(
-                            'Kelas ${index + 1}',
+                            item.courseMetaLabel ?? 'Kelas ${index + 1}',
                             style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
@@ -968,6 +983,19 @@ class _SchedulesScreenState extends State<SchedulesScreen> with SingleTickerProv
                         height: 1.25,
                       ),
                     ),
+                    if (item.facultyName != null || item.semester != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        item.programStudyAndSemesterLabel,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF64748B),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                     const SizedBox(height: 10),
 
                     // Room Indicator Pod

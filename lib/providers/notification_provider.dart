@@ -208,23 +208,30 @@ class SmartNotificationProvider extends ChangeNotifier {
     }
   }
 
-  // ─── TRIGGER 2: CHECK-OUT PULANG REMINDER (16:00 WIB) ───
-  Future<void> checkCheckOutReminder(AttendanceTodayModel? today) async {
+  // ─── TRIGGER 2: CHECK-OUT PULANG REMINDER (DYNAMIC SERVER SETTING / 16:00 WIB) ───
+  Future<void> checkCheckOutReminder(
+    AttendanceTodayModel? today, {
+    DateTime? nowOverride,
+  }) async {
     if (!_checkOutAlertsEnabled || today == null) return;
 
     // Only if already checked in and not yet checked out
     if (today.isCheckedIn && !today.isCheckedOut) {
-      final now = DateTime.now();
-      // Work day end check (>= 16:00)
-      if (now.hour >= 16) {
+      final now = nowOverride ?? DateTime.now();
+      final checkout = today.resolvedCheckoutTime;
+      final currentMinutes = now.hour * 60 + now.minute;
+      final checkoutMinutes = checkout.hour * 60 + checkout.minute;
+
+      if (currentMinutes >= checkoutMinutes) {
         final todayKey = _getTodayDateKey();
         final prefs = await SharedPreferences.getInstance();
         final cacheKey = 'reminded_checkout_$todayKey';
         final alreadyReminded = prefs.getBool(cacheKey) ?? false;
 
         if (!alreadyReminded) {
+          final formattedTime = today.formattedCheckoutTime;
           await addNotification(
-            title: 'Waktu Pulang Kerja (16:00 WIB)',
+            title: 'Waktu Pulang Kerja ($formattedTime WIB)',
             body: 'Jam kerja wajib telah selesai. Pastikan Anda telah melakukan Check-Out Pulang sebelum meninggalkan kampus.',
             type: 'checkout',
             channelId: NotificationService.channelReminders,

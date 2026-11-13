@@ -725,6 +725,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         color: AppColors.textPrimaryLight,
                                       ),
                                     ),
+                                    if (item.facultyName != null || item.semester != null || item.courseMetaLabel != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        [
+                                          if (item.facultyName != null || item.semester != null)
+                                            item.programStudyAndSemesterLabel,
+                                          if (item.courseMetaLabel != null) item.courseMetaLabel!,
+                                        ].join(' • '),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textMutedLight,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
                                     const SizedBox(height: 4),
                                     Row(
                                       children: [

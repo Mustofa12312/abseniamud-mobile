@@ -1,8 +1,11 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../core/services/document_viewer_service.dart';
 import '../core/theme/app_colors.dart';
+import '../data/models/leave_model.dart';
 import '../providers/leave_provider.dart';
 import '../widgets/status_badge.dart';
 
@@ -14,6 +17,8 @@ class LeavesScreen extends StatefulWidget {
 }
 
 class _LeavesScreenState extends State<LeavesScreen> {
+  int? _openingDocumentId;
+
   @override
   void initState() {
     super.initState();
@@ -21,6 +26,161 @@ class _LeavesScreenState extends State<LeavesScreen> {
       if (!mounted) return;
       Provider.of<LeaveProvider>(context, listen: false).fetchLeaves();
     });
+  }
+
+  Future<void> _openDocument(LeaveModel item) async {
+    if (!item.hasDocument || _openingDocumentId == item.id) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (item.isRemoteDocumentUrl) {
+      final err = await DocumentViewerService.openUrl(item.documentPath!);
+      if (err != null && mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(err), backgroundColor: AppColors.statusAlpha),
+        );
+      }
+      return;
+    }
+
+    setState(() => _openingDocumentId = item.id);
+    final leaveProvider = Provider.of<LeaveProvider>(context, listen: false);
+    final result = await leaveProvider.fetchLeaveDocument(item.id);
+    if (!mounted) return;
+    setState(() => _openingDocumentId = null);
+
+    if (!result.success || result.bytes == null) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(result.message ?? 'Dokumen tidak dapat dibuka.'),
+          backgroundColor: AppColors.statusAlpha,
+        ),
+      );
+      return;
+    }
+
+    final fileName = (result.fileName != null && result.fileName!.trim().isNotEmpty)
+        ? result.fileName!.trim()
+        : item.documentFileName;
+    final bytes = result.bytes!;
+
+    if (DocumentViewerService.isImageAttachment(
+      fileName: fileName,
+      contentType: result.contentType,
+    )) {
+      await _showImagePreviewDialog(
+        fileName: fileName,
+        bytes: bytes,
+        contentType: result.contentType,
+      );
+      return;
+    }
+
+    final err = await DocumentViewerService.openFile(
+      bytes: bytes,
+      fileName: fileName,
+      contentType: result.contentType,
+    );
+    if (err != null && mounted) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(err), backgroundColor: AppColors.statusAlpha),
+      );
+    }
+  }
+
+  Future<void> _showImagePreviewDialog({
+    required String fileName,
+    required Uint8List bytes,
+    String? contentType,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          insetPadding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.image_rounded, color: AppColors.brand700, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        fileName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.55,
+                ),
+                child: InteractiveViewer(
+                  minScale: 0.8,
+                  maxScale: 4.0,
+                  child: Image.memory(
+                    bytes,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text('Gagal merender pratinjau gambar.'),
+                    ),
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final err = await DocumentViewerService.openFile(
+                          bytes: bytes,
+                          fileName: fileName,
+                          contentType: contentType,
+                        );
+                        if (err != null && mounted) {
+                          messenger.showSnackBar(
+                            SnackBar(content: Text(err), backgroundColor: AppColors.statusAlpha),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                      label: const Text('Buka di Aplikasi Lain'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.brand600,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Tutup'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _showAddLeaveDialog() {
@@ -150,21 +310,73 @@ class _LeavesScreenState extends State<LeavesScreen> {
                                 height: 1.3,
                               ),
                             ),
-                            if (item.documentPath != null && item.documentPath!.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  const Icon(Icons.attachment_rounded, size: 14, color: AppColors.brand700),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      'Dokumen: ${item.documentPath}',
-                                      style: const TextStyle(fontSize: 11.5, color: AppColors.brand700, fontWeight: FontWeight.w600),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                            if (item.hasDocument) ...[
+                              const SizedBox(height: 10),
+                              InkWell(
+                                onTap: _openingDocumentId == item.id ? null : () => _openDocument(item),
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.brand50,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: AppColors.brand200),
                                   ),
-                                ],
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        item.isRemoteDocumentUrl
+                                            ? Icons.link_rounded
+                                            : Icons.attachment_rounded,
+                                        size: 16,
+                                        color: AppColors.brand700,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          item.documentFileName,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.brand800,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      if (_openingDocumentId == item.id)
+                                        const SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.brand700,
+                                          ),
+                                        )
+                                      else
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              item.isRemoteDocumentUrl ? 'Buka' : 'Lihat',
+                                              style: const TextStyle(
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w700,
+                                                color: AppColors.brand700,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 3),
+                                            const Icon(
+                                              Icons.open_in_new_rounded,
+                                              size: 13.5,
+                                              color: AppColors.brand700,
+                                            ),
+                                          ],
+                                        ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ],
                             if (item.adminNotes != null && item.adminNotes!.isNotEmpty) ...[
