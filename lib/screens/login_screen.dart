@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/theme/app_colors.dart';
 import '../core/constants/api_constants.dart';
+import '../core/device/device_info_service.dart';
 import '../core/storage/secure_storage_service.dart';
 import '../providers/auth_provider.dart';
 import '../providers/attendance_provider.dart';
