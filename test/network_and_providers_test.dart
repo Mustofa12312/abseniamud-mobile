@@ -14,6 +14,7 @@ import 'package:iaimu_mobile/providers/leave_provider.dart';
 import 'package:iaimu_mobile/providers/notification_provider.dart';
 import 'package:iaimu_mobile/widgets/mock_location_warning.dart';
 import 'package:iaimu_mobile/widgets/status_badge.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('ApiClient Security & URL Validation', () {
@@ -386,6 +387,7 @@ void main() {
     });
 
     test('SmartNotificationProvider checkCheckOutReminder triggers reminder at configured checkout time', () async {
+      SharedPreferences.setMockInitialValues({});
       final provider = SmartNotificationProvider();
       final checkedInToday = AttendanceTodayModel.fromJson({
         'status': 'CHECKED_IN',
