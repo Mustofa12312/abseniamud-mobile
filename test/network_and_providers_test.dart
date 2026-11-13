@@ -7,7 +7,6 @@ import 'package:iaimu_mobile/core/network/api_client.dart';
 import 'package:iaimu_mobile/core/services/notification_service.dart';
 import 'package:iaimu_mobile/data/models/attendance_today_model.dart';
 import 'package:iaimu_mobile/data/models/campus_location_model.dart';
-import 'package:iaimu_mobile/data/models/schedule_model.dart';
 import 'package:iaimu_mobile/providers/attendance_provider.dart';
 import 'package:iaimu_mobile/providers/correction_provider.dart';
 import 'package:iaimu_mobile/providers/device_security_provider.dart';
