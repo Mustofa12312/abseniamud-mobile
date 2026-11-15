@@ -105,10 +105,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     if (authProvider.isDeviceBoundLocally) {
       final inputIdentifier = _emailController.text.trim().toLowerCase();
       final boundEmail = authProvider.boundAccountEmail!.toLowerCase();
-      final boundName = authProvider.boundAccountName?.trim().toLowerCase();
-
-      final matchesEmail = inputIdentifier == boundEmail;
-      final matchesName = boundName != null && boundName.isNotEmpty && inputIdentifier == boundName;
       final isDifferentEmail = inputIdentifier.contains('@') && inputIdentifier != boundEmail;
 
       if (isDifferentEmail) {
