@@ -156,11 +156,15 @@ class SecureStorageService {
   // Bound Account (Strict 1:1 Hardware Lockdown)
   Future<void> saveBoundAccount({required String email, String? name}) async {
     final cleanEmail = email.trim().toLowerCase();
-    await _secureStorage.write(key: ApiConstants.keyBoundEmail, value: cleanEmail);
+    try {
+      await _secureStorage.write(key: ApiConstants.keyBoundEmail, value: cleanEmail);
+    } catch (_) {}
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(ApiConstants.keyBoundEmail, cleanEmail);
     if (name != null && name.trim().isNotEmpty) {
-      await _secureStorage.write(key: ApiConstants.keyBoundName, value: name.trim());
+      try {
+        await _secureStorage.write(key: ApiConstants.keyBoundName, value: name.trim());
+      } catch (_) {}
       await prefs.setString(ApiConstants.keyBoundName, name.trim());
     }
   }
