@@ -103,9 +103,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
     // Strict 1:1 Hardware Device Lock: prevent logging into another account on this bound phone
     if (authProvider.isDeviceBoundLocally) {
-      final inputEmail = _emailController.text.trim().toLowerCase();
+      final inputIdentifier = _emailController.text.trim().toLowerCase();
       final boundEmail = authProvider.boundAccountEmail!.toLowerCase();
-      if (inputEmail != boundEmail) {
+      final boundName = authProvider.boundAccountName?.trim().toLowerCase();
+
+      final matchesEmail = inputIdentifier == boundEmail;
+      final matchesName = boundName != null && boundName.isNotEmpty && inputIdentifier == boundName;
+      final isDifferentEmail = inputIdentifier.contains('@') && inputIdentifier != boundEmail;
+
+      if (isDifferentEmail) {
         HapticFeedback.heavyImpact();
         _showBoundAccountMismatchDialog(
           currentBoundEmail: authProvider.boundAccountEmail!,
