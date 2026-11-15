@@ -132,6 +132,11 @@ class NotificationService {
     String? channelId,
     String? payload,
   }) async {
+    if (!_isInitialized) {
+      debugPrint('NotificationService not initialized, skipping notification: $title');
+      return;
+    }
+
     final channel = channelId ?? channelReminders;
 
     String channelName = 'Pengingat Presensi';
@@ -175,6 +180,11 @@ class NotificationService {
     String? channelId,
     String? payload,
   }) async {
+    if (!_isInitialized) {
+      debugPrint('NotificationService not initialized, skipping schedule: $title');
+      return false;
+    }
+
     final now = DateTime.now();
     if (scheduledDate.isBefore(now)) {
       return false;
@@ -234,11 +244,13 @@ class NotificationService {
 
   /// Cancel a specific notification
   Future<void> cancel(int id) async {
+    if (!_isInitialized) return;
     await _notificationsPlugin.cancel(id: id);
   }
 
   /// Cancel all active notifications
   Future<void> cancelAll() async {
+    if (!_isInitialized) return;
     await _notificationsPlugin.cancelAll();
   }
 }
