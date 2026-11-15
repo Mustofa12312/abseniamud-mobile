@@ -196,6 +196,43 @@ class _LeavesScreenState extends State<LeavesScreen> {
     );
   }
 
+  Future<void> _confirmCancelLeave(LeaveModel item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Batalkan Pengajuan?'),
+        content: Text('Apakah Anda yakin ingin membatalkan pengajuan ${item.type} untuk tanggal ${item.startDate}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Kembali'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error600),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Ya, Batalkan', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final leaveProv = Provider.of<LeaveProvider>(context, listen: false);
+      final ok = await leaveProv.cancelLeave(item.id);
+      if (mounted) {
+        if (ok) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Pengajuan izin berhasil dibatalkan.')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(leaveProv.errorMessage ?? 'Gagal membatalkan pengajuan.')),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final leaveProvider = Provider.of<LeaveProvider>(context);
@@ -396,9 +433,27 @@ class _LeavesScreenState extends State<LeavesScreen> {
                               ),
                             ],
                             const Divider(height: 20),
-                            Text(
-                              'Diajukan pada: ${item.createdAt}',
-                              style: const TextStyle(fontSize: 11, color: AppColors.textMutedLight),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Diajukan: ${item.createdAt}',
+                                  style: const TextStyle(fontSize: 11, color: AppColors.textMutedLight),
+                                ),
+                                if (item.status.toUpperCase() == 'PENDING')
+                                  TextButton.icon(
+                                    onPressed: () => _confirmCancelLeave(item),
+                                    icon: const Icon(Icons.delete_outline_rounded, size: 14, color: AppColors.error600),
+                                    label: const Text(
+                                      'Batalkan',
+                                      style: TextStyle(fontSize: 11.5, color: AppColors.error600, fontWeight: FontWeight.w600),
+                                    ),
+                                    style: TextButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ],
                         ),

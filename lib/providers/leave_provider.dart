@@ -209,4 +209,35 @@ class LeaveProvider extends ChangeNotifier {
       );
     }
   }
+
+  /// Cancel/withdraw a pending leave request.
+  Future<bool> cancelLeave(int id) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiClient.delete('${ApiConstants.leaves}/$id');
+      if (response != null && response['success'] == true) {
+        _leaves.removeWhere((item) => item.id == id);
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+      _errorMessage = response?['message'] as String? ?? 'Gagal membatalkan pengajuan izin.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (_) {
+      _errorMessage = 'Gagal membatalkan pengajuan izin.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
 }
