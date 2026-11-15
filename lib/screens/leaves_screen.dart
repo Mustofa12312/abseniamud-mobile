@@ -208,7 +208,7 @@ class _LeavesScreenState extends State<LeavesScreen> {
             child: const Text('Kembali'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error600),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.statusAlpha),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Ya, Batalkan', style: TextStyle(color: Colors.white)),
           ),
@@ -443,10 +443,10 @@ class _LeavesScreenState extends State<LeavesScreen> {
                                 if (item.status.toUpperCase() == 'PENDING')
                                   TextButton.icon(
                                     onPressed: () => _confirmCancelLeave(item),
-                                    icon: const Icon(Icons.delete_outline_rounded, size: 14, color: AppColors.error600),
+                                    icon: const Icon(Icons.delete_outline_rounded, size: 14, color: AppColors.statusAlpha),
                                     label: const Text(
                                       'Batalkan',
-                                      style: TextStyle(fontSize: 11.5, color: AppColors.error600, fontWeight: FontWeight.w600),
+                                      style: TextStyle(fontSize: 11.5, color: AppColors.statusAlpha, fontWeight: FontWeight.w600),
                                     ),
                                     style: TextButton.styleFrom(
                                       visualDensity: VisualDensity.compact,
