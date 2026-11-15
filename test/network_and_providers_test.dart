@@ -246,6 +246,29 @@ void main() {
       expect(find.textContaining('Fake GPS terdeteksi'), findsOneWidget);
       expect(find.textContaining('Izin lokasi ditolak'), findsOneWidget);
     });
+
+    test('Strict 1:1 Hardware Lockdown: SecureStorage persists bound account and clears on reset', () async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = SecureStorageService();
+
+      // Initially null
+      expect(await storage.getBoundAccountEmail(), isNull);
+      expect(await storage.getBoundAccountName(), isNull);
+
+      // Save bound account
+      await storage.saveBoundAccount(email: 'dosen@iaimu.ac.id', name: 'Dr. Dosen');
+      expect(await storage.getBoundAccountEmail(), 'dosen@iaimu.ac.id');
+      expect(await storage.getBoundAccountName(), 'Dr. Dosen');
+
+      // Clear session does not remove bound account (device stays locked to user)
+      await storage.clearSession();
+      expect(await storage.getBoundAccountEmail(), 'dosen@iaimu.ac.id');
+
+      // Super admin device reset clears the local bound lock
+      await storage.clearBoundAccount();
+      expect(await storage.getBoundAccountEmail(), isNull);
+      expect(await storage.getBoundAccountName(), isNull);
+    });
   });
 
   group('Prioritas Tinggi: Fingerprint, Pagination & Leave Attachment', () {

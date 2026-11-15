@@ -153,6 +153,47 @@ class SecureStorageService {
     return prefs.getString(ApiConstants.keyDeviceId);
   }
 
+  // Bound Account (Strict 1:1 Hardware Lockdown)
+  Future<void> saveBoundAccount({required String email, String? name}) async {
+    final cleanEmail = email.trim().toLowerCase();
+    await _secureStorage.write(key: ApiConstants.keyBoundEmail, value: cleanEmail);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(ApiConstants.keyBoundEmail, cleanEmail);
+    if (name != null && name.trim().isNotEmpty) {
+      await _secureStorage.write(key: ApiConstants.keyBoundName, value: name.trim());
+      await prefs.setString(ApiConstants.keyBoundName, name.trim());
+    }
+  }
+
+  Future<String?> getBoundAccountEmail() async {
+    try {
+      final email = await _secureStorage.read(key: ApiConstants.keyBoundEmail);
+      if (email != null && email.trim().isNotEmpty) return email.trim().toLowerCase();
+    } catch (_) {}
+    final prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString(ApiConstants.keyBoundEmail);
+    return email?.trim().toLowerCase();
+  }
+
+  Future<String?> getBoundAccountName() async {
+    try {
+      final name = await _secureStorage.read(key: ApiConstants.keyBoundName);
+      if (name != null && name.trim().isNotEmpty) return name.trim();
+    } catch (_) {}
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(ApiConstants.keyBoundName);
+  }
+
+  Future<void> clearBoundAccount() async {
+    try {
+      await _secureStorage.delete(key: ApiConstants.keyBoundEmail);
+      await _secureStorage.delete(key: ApiConstants.keyBoundName);
+    } catch (_) {}
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(ApiConstants.keyBoundEmail);
+    await prefs.remove(ApiConstants.keyBoundName);
+  }
+
   // Clear Session
   Future<void> clearSession() async {
     await deleteToken();

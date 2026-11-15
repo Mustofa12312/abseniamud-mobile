@@ -68,11 +68,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     final storage = SecureStorageService();
     final url = await storage.getBaseUrl();
     final rememberedEmail = await storage.getRememberedEmail();
+    final boundEmail = await storage.getBoundAccountEmail();
     if (!mounted) return;
     setState(() {
       _currentBaseUrl = url;
-      if (_emailController.text.isEmpty && rememberedEmail != null) {
-        _emailController.text = rememberedEmail;
+      if (_emailController.text.isEmpty) {
+        if (boundEmail != null && boundEmail.isNotEmpty) {
+          _emailController.text = boundEmail;
+        } else if (rememberedEmail != null) {
+          _emailController.text = rememberedEmail;
+        }
       }
     });
   }
@@ -94,6 +99,23 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     HapticFeedback.lightImpact();
     FocusScope.of(context).unfocus();
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final meta = Provider.of<DeviceSecurityProvider>(context, listen: false).deviceMetadata;
+
+    // Strict 1:1 Hardware Device Lock: prevent logging into another account on this bound phone
+    if (authProvider.isDeviceBoundLocally) {
+      final inputEmail = _emailController.text.trim().toLowerCase();
+      final boundEmail = authProvider.boundAccountEmail!.toLowerCase();
+      if (inputEmail != boundEmail) {
+        HapticFeedback.heavyImpact();
+        _showBoundAccountMismatchDialog(
+          currentBoundEmail: authProvider.boundAccountEmail!,
+          attemptedEmail: _emailController.text.trim(),
+          meta: meta,
+        );
+        return;
+      }
+    }
+
     final attProvider = Provider.of<AttendanceProvider>(context, listen: false);
     final schedProvider = Provider.of<ScheduleProvider>(context, listen: false);
     final leaveProvider = Provider.of<LeaveProvider>(context, listen: false);
@@ -306,6 +328,91 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             onPressed: () => Navigator.pop(ctx),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.brand600, foregroundColor: Colors.white),
             child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBoundAccountMismatchDialog({
+    required String currentBoundEmail,
+    required String attemptedEmail,
+    DeviceMetadata? meta,
+  }) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        icon: Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: Colors.amber.shade100,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(Icons.phonelink_lock_rounded, color: Colors.amber.shade900, size: 28),
+        ),
+        title: const Text(
+          'Perangkat Khusus Terikat',
+          style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800),
+          textAlign: TextAlign.center,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Smartphone ini telah terikat secara permanen khusus untuk akun:\n$currentBoundEmail',
+              style: const TextStyle(fontSize: 13, height: 1.4, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Anda mencoba login dengan akun "$attemptedEmail". Demi mencegah titip presensi antar-civitas, 1 smartphone hanya boleh digunakan oleh 1 akun resmi.',
+              style: const TextStyle(fontSize: 12.5, height: 1.4, color: Color(0xFF475569)),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: const Text(
+                'Jika smartphone ini sudah resmi berpindah kepemilikan dan telah direset oleh Super Admin di server, silakan gunakan tombol "Reset Ikatan Lokal".',
+                style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B), height: 1.3),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _showDeviceResetHelpDialog(meta);
+            },
+            child: const Text('Bantuan Reset Admin', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.brand700)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final auth = Provider.of<AuthProvider>(context, listen: false);
+              await auth.releaseBoundAccountLocally();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Ikatan perangkat lokal dilepas. Masukkan akun baru untuk diverifikasi ke server.'),
+                    backgroundColor: AppColors.brand700,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber.shade800,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Reset Ikatan Lokal'),
           ),
         ],
       ),
@@ -858,6 +965,66 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 ),
                               ),
                               const SizedBox(height: 16),
+                            ],
+
+                            // ── Bound Account Status Banner ──
+                            if (authProvider.isDeviceBoundLocally) ...[
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 16),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF0FDF4),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: const Color(0xFF86EFAC)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFDCFCE7),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.lock_person_rounded, size: 20, color: Color(0xFF15803D)),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Perangkat Terikat Khusus',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w800,
+                                              color: Color(0xFF15803D),
+                                              letterSpacing: 0.2,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            authProvider.boundAccountName != null
+                                                ? '${authProvider.boundAccountName} (${authProvider.boundAccountEmail})'
+                                                : authProvider.boundAccountEmail!,
+                                            style: const TextStyle(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xFF14532D),
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Panduan Reset Perangkat',
+                                      icon: const Icon(Icons.info_outline_rounded, size: 20, color: Color(0xFF15803D)),
+                                      onPressed: () => _showDeviceResetHelpDialog(meta),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
 
                             // ── Email / Username Field ──

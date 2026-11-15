@@ -20,6 +20,13 @@ class AuthProvider extends ChangeNotifier {
   UserModel? _currentUser;
   UserModel? get currentUser => _currentUser;
 
+  String? _boundAccountEmail;
+  String? _boundAccountName;
+
+  String? get boundAccountEmail => _boundAccountEmail;
+  String? get boundAccountName => _boundAccountName;
+  bool get isDeviceBoundLocally => _boundAccountEmail != null && _boundAccountEmail!.isNotEmpty;
+
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
@@ -37,6 +44,9 @@ class AuthProvider extends ChangeNotifier {
     _status = AuthStatus.loading;
     notifyListeners();
 
+    _boundAccountEmail = await _storage.getBoundAccountEmail();
+    _boundAccountName = await _storage.getBoundAccountName();
+
     String? token;
     try {
       token = await _storage.getToken();
@@ -52,6 +62,11 @@ class AuthProvider extends ChangeNotifier {
       if (response != null && response['success'] == true && response['data'] is Map) {
         _currentUser = UserModel.fromJson(Map<String, dynamic>.from(response['data'] as Map));
         await _storage.saveUser(_currentUser!.toJson());
+        if (_boundAccountEmail == null || _boundAccountEmail!.isEmpty) {
+          await _storage.saveBoundAccount(email: _currentUser!.email, name: _currentUser!.name);
+          _boundAccountEmail = _currentUser!.email.toLowerCase();
+          _boundAccountName = _currentUser!.name;
+        }
         _status = AuthStatus.authenticated;
         _errorMessage = null;
         notifyListeners();
@@ -70,6 +85,11 @@ class AuthProvider extends ChangeNotifier {
       final cachedUser = await _storage.getUser();
       if (token != null && token.isNotEmpty && cachedUser != null) {
         _currentUser = UserModel.fromJson(cachedUser);
+        if (_boundAccountEmail == null || _boundAccountEmail!.isEmpty) {
+          await _storage.saveBoundAccount(email: _currentUser!.email, name: _currentUser!.name);
+          _boundAccountEmail = _currentUser!.email.toLowerCase();
+          _boundAccountName = _currentUser!.name;
+        }
         _status = AuthStatus.authenticated;
         notifyListeners();
         return;
@@ -79,6 +99,11 @@ class AuthProvider extends ChangeNotifier {
       final cachedUser = await _storage.getUser();
       if (token != null && token.isNotEmpty && cachedUser != null) {
         _currentUser = UserModel.fromJson(cachedUser);
+        if (_boundAccountEmail == null || _boundAccountEmail!.isEmpty) {
+          await _storage.saveBoundAccount(email: _currentUser!.email, name: _currentUser!.name);
+          _boundAccountEmail = _currentUser!.email.toLowerCase();
+          _boundAccountName = _currentUser!.name;
+        }
         _status = AuthStatus.authenticated;
         notifyListeners();
         return;
@@ -123,6 +148,9 @@ class AuthProvider extends ChangeNotifier {
         _currentUser = UserModel.fromJson(userData);
         await _storage.saveUser(_currentUser!.toJson(), persist: rememberMe);
         await _storage.saveRememberedEmail(rememberMe ? email.trim() : null);
+        await _storage.saveBoundAccount(email: _currentUser!.email, name: _currentUser!.name);
+        _boundAccountEmail = _currentUser!.email.toLowerCase();
+        _boundAccountName = _currentUser!.name;
 
         _apiClient.resetSessionExpiredGuard();
         NavigationService.resetLoginRedirectGuard();
@@ -144,6 +172,15 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  /// Releases the local account lock so a user can attempt to bind a new account
+  /// after Super Admin has executed device reset on the backend.
+  Future<void> releaseBoundAccountLocally() async {
+    await _storage.clearBoundAccount();
+    _boundAccountEmail = null;
+    _boundAccountName = null;
+    notifyListeners();
   }
 
   /// Logout

@@ -8,6 +8,8 @@ class ApiConstants {
   static const String keyBaseUrl = 'iaimu_custom_base_url';
   static const String keyDeviceId = 'iaimu_device_fingerprint';
   static const String keyRememberedEmail = 'iaimu_remembered_email';
+  static const String keyBoundEmail = 'iaimu_bound_account_email';
+  static const String keyBoundName = 'iaimu_bound_account_name';
 
   // API Endpoints
   static const String login = '/auth/login';
